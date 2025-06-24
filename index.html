@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en" style="background-color: #0f0f0f;">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/pp.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <script> const global = globalThis; </script>
+    <script>
+      // Более надежный способ определения Mac-устройств
+      const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.platform) || 
+                   /Mac|iPod|iPhone|iPad/.test(navigator.userAgent);
+      
+      if (isMac) {
+        // Добавляем начальные стили через CSS
+        const style = document.createElement('style');
+        style.textContent = `
+          main, .sidebar {
+            zoom: 0.8;
+          }
+        `;
+        document.head.appendChild(style);
+
+        // Добавляем обработчик для применения стилей после загрузки страницы
+        window.addEventListener('load', () => {
+          // Ждем, пока React отрендерит компоненты
+          setTimeout(() => {
+            const main = document.querySelector('main');
+            const sidebar = document.querySelector('.sidebar');
+            
+            if (main) {
+              main.style.zoom = '0.8';
+            }
+            
+            if (sidebar) {
+              sidebar.style.zoom = '0.8';
+            }
+          }, 100);
+        });
+      }
+    </script>
+    <title>PlayProfi</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+    <!-- Yandex.Metrika counter -->
+    <script type="text/javascript">
+      (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+      m[i].l=1*new Date();
+      for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
+      k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})
+      (window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
+
+      ym(100417251, "init", {
+          clickmap:true,
+          trackLinks:true,
+          accurateTrackBounce:true
+      });
+    </script>
+    <noscript><div><img src="https://mc.yandex.ru/watch/100417251" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+    <!-- /Yandex.Metrika counter -->
+  </body>
+</html>

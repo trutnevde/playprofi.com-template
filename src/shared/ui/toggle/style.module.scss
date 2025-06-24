@@ -1,0 +1,54 @@
+.toggle {
+	display: inline-grid;
+	grid-template-columns: auto 1fr;
+	grid-template-rows: auto auto;
+	column-gap: 10px;
+	align-items: center;
+}
+
+.icon {
+	width: 33px;
+	height: 18px;
+	grid-row: 1;
+	grid-column: 1;
+	cursor: pointer;
+
+	border: 1px solid white;
+	border-radius: 9px;
+	opacity: 0.3;
+	display: flex;
+	justify-content: end;
+
+	&::after {
+		content: "";
+		height: 100%;
+		aspect-ratio: 1;
+		background-color: white;
+		border-radius: 50%;
+	}
+
+	&.checked {
+		justify-content: start;
+		border-color: #29E4DE;
+		opacity: 1;
+
+		&::after {
+			background-color: #29E4DE;
+		}
+	}
+}
+
+.label {
+	grid-row: 1;
+	grid-column: 2;
+
+	font-size: 20px;
+}
+
+.description {
+	grid-row: 2;
+	grid-column: 2;
+
+	font-size: 14px;
+	color: #878787;
+}

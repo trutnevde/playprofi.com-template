@@ -1,0 +1,21 @@
+.editor-container {
+    border-radius: 16px;
+    background-color: #1e1e1e;
+    padding: 16px;
+    min-height: 300px;
+    color: white;
+    font-size: 16px;
+    line-height: 1.6;
+    overflow-y: auto;
+    max-height: 500px;
+  }
+  
+  .editor-input {
+    outline: none;
+  }
+  
+  .editor-placeholder {
+    color: #6b7280;
+    position: absolute;
+    pointer-events: none;
+  }

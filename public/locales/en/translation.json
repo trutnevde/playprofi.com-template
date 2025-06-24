@@ -1,0 +1,651 @@
+{
+  "landing": {
+    "buttons": {
+      "login": "Login",
+      "try-now": "Try now",
+      "get-started": "Get started",
+      "explore-demo": "Explore the demo",
+      "go-create": "Go create",
+      "free-try": "Free try now",
+      "make-life": "MAKE LIFE EASIER NOW",
+      "buy-for": "Buy for {{price}}"
+    },
+    "welcome-section": {
+      "slogan": "Our value is your ",
+      "success": "Success",
+      "title": "The content of the future is in your hands!",
+      "advantage": {
+        "content": "for content",
+        "tools": "Professional tools",
+        "growth": "Rapid growth",
+        "algorithms": "Unique algorithms"
+      }
+    },
+    "tools-section": {
+      "title": "All tools in one place",
+      "subtitle": "All the tools for content creation — from script generation to YouTube trend analysis — are gathered on one platform."
+    },
+    "benefits-section": {
+      "title": "Our benefits",
+      "generation-card-title": "One click generation",
+      "generation-card-text": "Save time by creating quality scripts in minutes",
+      "trends-card-title": "Actual Trends",
+      "trends-card-text": "Get inspired, create, and rise higher, knowing what's relevant today",
+      "integration-card-title": "YouTube Integration",
+      "integration-card-text": "Instantly publish your videos to YouTube through our platform",
+      "professional-card-title": "Professional",
+      "professional-card-text": "We provide comprehensive solutions for production automation, suitable for both novice bloggers and large studios"
+    },
+    "indicators-section": {
+      "title": "The indicators have increased",
+      "retention": {
+        "title": "Retention",
+        "text": "+45% for the last month! Your feedback inspires us to create even more interesting content."
+      },
+      "view": {
+        "title": "Views",
+        "text": "+60%! We are grateful for your activity and engagement, which helps us reach new heights."
+      },
+      "subscriptions": {
+        "title": "Subscriptions",
+        "text": "+30%! Your desire to share our materials with friends is the best compliment and motivation for our team."
+      }
+    },
+    "analysis-section": {
+      "title": "Global trend analysis",
+      "subtitle": "Our analytics tool tracks global YouTube trends, offering you ideas for topics and formats that are already trending or about to break through."
+    },
+    "timestamps-section": {
+      "title": "Timestamps",
+      "subtitle": "Make viewing more convenient and your content more professional!",
+      "description": "Our system automatically divides your videos into chapters and adds timestamps, allowing viewers to quickly find specific moments, enhancing their viewing experience and encouraging them to return to your videos."
+    },
+    "script-section": {
+      "title": "Script Creation",
+      "subtitle": "AI-Generated Scripts Customizable to Your Needs"
+    },
+    "thumbnails-section": {
+      "title": "Ai-generated Thumbnails and Editor",
+      "subtitle": "The platform automatically suggests several catchy preview options tailored to your topics. The built-in editor allows you to instantly add essential details that give your cover a unique touch."
+    },
+    "integration-section": {
+      "title": "Simple and secure integration with YouTube",
+      "description": "Link your account, and the platform makes the publishing process fast and easy. You can manage all your content with peace of mind regarding security. Publishing happens directly from your dashboard, so you no longer need to switch between applications.",
+      "user-card-title": "User",
+      "user-card-text": "Wants a seamless video upload process.",
+      "youtube-card-title": "YouTube",
+      "youtube-card-text": "Provide predictive analytics for your channel."
+    },
+    "example-section": {
+      "title": "Example of Our Service",
+      "subtitle": "See how our tools streamline video creation, from script generation to final edits, delivering high-quality results quickly and effortlessly"
+    },
+    "faq-section": {
+      "title": "Frequently ask questions",
+      "subtitle": "Ask everything you need to know about our services",
+      "general": {
+        "nav-title": "General",
+        "title": "General Questions"
+      },
+      "build": {
+        "nav-title": "Build",
+        "title": "Build Questions"
+      },
+      "promote": {
+        "nav-title": "Promote",
+        "title": "Promote Questions"
+      },
+      "manage": {
+        "nav-title": "Manage",
+        "title": "Manage Questions"
+      },
+      "integrations": {
+        "nav-title": "Integrations",
+        "title": "Integrations Questions"
+      },
+      "legal": {
+        "nav-title": "Legal",
+        "title": "Legal Questions"
+      }
+    },
+    "try-now-section": {
+      "title": "Try out the features for free!",
+      "subtitle": "Sign up and try all the features of our platform. Scripts, trends, covers — everything you need to create a viral video is ready and waiting for you!"
+    },
+    "coming-soon-section": {
+      "gradient-title": "coming Soon",
+      "title": "AI Video Editing",
+      "subtitle": "Our AI-powered video editing tool will soon simplify content creation, making it faster and easier than ever"
+    },
+    "best-prices-section": {
+      "title": "Best prices in industry!",
+      "subtitle": "By allowing instant access to specific moments, they enhance the overall viewing experience and encourage audience interaction.",
+      "service": "Service",
+      "scenario-generation": "Scenario Generation",
+      "timestamps": "Timestamps",
+      "thumbnails": "Thumbnails",
+      "started": "Started",
+      "professional": "Professional",
+      "up-to": "Up to {{number}}"
+    },
+    "footer": {
+      "title": "Perfect Videos in Minutes",
+      "subtitle": "Simple tools for generating scripts, timestamps, and thumbnails. Try it for free or choose the professional plan for full control",
+      "product": {
+        "title": "PRODUCT",
+        "feature": "Features Overview",
+        "script": "Script Creation",
+        "timestamps": "Timestamps",
+        "thumbnails": "Thumbnails",
+        "automation": "AI Automation"
+      },
+      "solutions": {
+        "title": "SOLUTIONS",
+        "youtubers": "for YouTubers",
+        "content-creators": "For Content Creation",
+        "marketers": "For Marketers",
+        "small-businesses": "For Small Businesses",
+        "influencers": "For Influencers"
+      },
+      "company": {
+        "title": "COMPANY",
+        "login": "Login",
+        "pricing": "Pricing",
+        "support": "Support",
+        "blog-resources": "Blog & Resources",
+        "terms-service": "Terms of Service"
+      }
+    },
+    "menu": {
+      "our-benefits": "Our benefits",
+      "trends": "Trends",
+      "scripts": "Scripts",
+      "thumbnails": "Thumbnails",
+      "timestamps": "Timestamps",
+      "example": "Example",
+      "faq": "FAQ",
+      "prices": "Prices"
+    }
+  },
+  "auth": {
+    "or": "or",
+    "email": "Email",
+    "email-invalid": "Invalid email format",
+    "password": "Password",
+    "password-min-length": "Password must be at least 8 characters long and contain at least one digit",
+    "password-must-contain-digit": "Password must contain at least one digit",
+    "password-required": "Password is required for registration",
+    "confirmPassword": "Repeat password (manual input only)",
+    "notConfirmPassword": "Passwords do not match!",
+    "username": "Username",
+    "name": "Name",
+    "remember-me": "Remember me",
+    "buttons": {
+      "login-now": "Log in Now",
+      "create-account": "Create Account",
+      "forgot-password": "Forgot Password?",
+      "google-login": "Log in with Google",
+      "google-sign-up": "Sign up with Google",
+      "login": "Log in",
+      "become-profi": "Become a"
+    },
+    "youtube-text": "Explore trends and discover actual signals",
+    "chart-text": "Generate viral titles and thumbnails",
+    "coins-text": "Try it free today!",
+    "pencil-text": "Create scripts in one click",
+    "have-account": "Already have an account?",
+    "documents": "By clicking the button, I agree to the Terms of Service and Privacy Policy",
+    "forgot-password": {
+      "email": "Email",
+      "title": "Forgot your password",
+      "subtitle": "Please enter the email address you'd like your password reset information sent to",
+      "rest-link": "Request reset link",
+      "back-to-login": "Back to login"
+    },
+    "reset-password": {
+      "title": "Reset your password",
+      "subtitle": "Strong passwords include numbers, letters, and punctuation marks.",
+      "password": "Enter new password",
+      "confirm-password": "Confirm new password",
+      "reset-password": "Reset password",
+      "password-mismatch": "Passwords do not match",
+      "resetting": "Password reset process",
+      "password-min-length": "Password must be at least 8 characters long and contain at least one digit",
+      "password-must-contain-digit": "Password must contain at least one digit"
+    }
+  },
+  "app": {
+    "layout": {
+      "instruments": "Tools",
+      "menu": {
+        "trends": "Find Idea",
+        "trendsBase": "Edit Base",
+        "analyzer": "Analyze Idea",
+        "preview": "Preview",
+        "preview-generator": "AI Preview",
+        "scenario": {
+          "title": "AI Scenario",
+          "subtext": "coming soon"
+        },
+        "voiceover": {
+          "title": "AI Voiceover"
+        },
+        "editvideo": {
+          "title": "Auto Cut",
+          "subtext": "coming soon"
+        },
+        "timestamps": "Timestamps"
+      },
+      "button": "Buy PRO",
+      "mainMenu": {
+        "addChannel": "Add channel",
+        "support": "Contact in support",
+        "exit": "Logout"
+      },
+      "tokens": "Tokens"
+    },
+    "home": {
+      "slider": {
+        "slide1": {
+          "title": "Create your own channel database and track the signals according to the installed filters. Always hold your hand on the pulse of current trends!",
+          "category": "Trends"
+        },
+        "slide2": {
+          "title": "Is there already an idea for video? Put her into our analizer and look at what videos in different languages ​​came out on this subject. Determine the best name and preview for your video!",
+          "category": "Analyzer"
+        },
+        "slide3": {
+          "title": "Do you already have a finished video? Divide it into chapters using our system in 3 clicks: download the video - generate the names of the chapters - pour the timepers on the video!",
+          "category": "Timestamps"
+        }
+      },
+      "analyzer": {
+        "title": "Analyzer",
+        "data": {
+          "input_placeholder": "Enter keywords or names for the future video to analyze the topic and choose the best title and thumbnail",
+          "select1": {
+            "title": "Select duration"
+          },
+          "select2": {
+            "title": "Select language"
+          }
+        },
+        "button": "Analyze the topic"
+      },
+      "scenario": {
+        "title": "Scenario",
+        "subtext": "coming soon",
+        "data": {
+          "title": "AI Scenario",
+          "subtitle": "",
+          "text": "This scenario is generated automatically. Our AI-powered scenario generator creates unique stories based on your input. It selects the best format, structure, facts, and delivery to keep viewers engaged. The system adapts to YouTube, documentaries, blogs, and interviews, generating scenarios that truly captivate and keep viewers hooked."
+        }
+      },
+      "timestamps": {
+        "title": "Timestamps"
+      },
+      "trends": {
+        "title": "Trends"
+      }
+    },
+    "trends": {
+      "stepsData": {
+        "title": "Be the first to spot trends!",
+        "description1": "Create a base and add channels by topic",
+        "description2": "Receive signals about trending videos",
+        "description3": "Pick viral ideas and move to the Analysis section"
+      },
+      "base": {
+        "title": "Select base",
+        "mb": "My base",
+        "gb": "Shared bases",
+        "save": "Saving"
+      },
+      "createBase": {
+        "title": "Create Base",
+        "text": "Create your own base to collect and analyze trending videos tailored to your goals",
+        "input_placeholder": "Enter name",
+        "buttonAction": "Create",
+        "button": "Later"
+      },
+      "deleteBase": {
+        "title": "Delete Base",
+        "subTitle": "Are you sure you want to delete",
+        "text": "All channels and data you have added to this base will be permanently lost. This action cannot be undone.",
+        "buttonAction": "Delete",
+        "button": "Cancel"
+      },
+      "search": "Search",
+      "back": "Back",
+      "signals": {
+        "filters": {
+          "title": "Filters",
+          "ptv": "Percent to views",
+          "pts": "Percent to subs",
+          "views": "Views",
+          "date": "Date",
+          "pf": "Percent from",
+          "sf": "Subscribers from",
+          "shv": "Show hidden videos"
+        },
+        "title": "Signals from base",
+        "titleNoBase": "Signals from available bases",
+        "results": "Results",
+        "subBlock": {
+          "title": "This is a trends base",
+          "text": "Trends are collections of trending videos analyzed by the system based on algorithms. Select a video to get analytics, track current topics, and find content ideas.",
+          "buttonCreate": "Create base",
+          "buttonEdit": "Edit base"
+        }
+      },
+      "bases": {
+        "title": "Edit Base",
+        "results": "Results",
+        "subBlock": {
+          "inputTitle": "Insert link from video or channel",
+          "input_placeholder": "Your link",
+          "title": "This is a trends base",
+          "text": "Trends are collections of trending videos analyzed by the system based on algorithms. Select a video to get analytics, track current topics, and find content ideas.",
+          "buttonAdd": "Add channel"
+        }
+      },
+      "channel": {
+        "title": "Signals from channel"
+      },
+      "notification": {
+        "limitChannel": "You have reached the limit of adding channels to the base",
+        "limitChannelSub": "Select another base or remove some channel from the current base",
+        "channelNotFound": "Channel not found",
+        "channelNotFoundSub": "Unable to get channel data"
+      }
+    },
+    "analyzer": {
+      "stepsData": {
+        "title": "Analyze your idea",
+        "description1": "Enter your idea",
+        "description2": "Adjust filters and analyze successful videos on this topic",
+        "description3": "Select relevant videos and get ideas for your future video's title and thumbnail"
+      },
+      "search": "Search",
+      "cards": {
+        "title": "previous analysis",
+        "input_placeholder": "Enter keywords or names for the future video to analyze the topic and choose the best title and thumbnail",
+        "changeSettings": "Change settings",
+        "select1": {
+          "title": "Select duration",
+          "options": {
+            "1": "Any",
+            "2": "4-20 minutes",
+            "3": "20+ minutes"
+          }
+        },
+        "select2": {
+          "title": "Select language",
+          "options": {
+            "1": "All available",
+            "2": "Russian",
+            "3": "English"
+          }
+        },
+        "button": "Analyze the topic",
+        "subBlock": {
+          "title": "Create a viral title",
+          "text": "Choose one or more relevant signals and the system will generate an ideal title for your future video"
+        }
+      },
+      "analyze": {
+        "filters": {
+          "sort": {
+            "title": "Sort by",
+            "options": {
+              "1": "Relevance",
+              "2": "Percent to subs",
+              "3": "Views",
+              "4": "Date"
+            }
+          },
+          "publish": {
+            "title": "Publish date",
+            "options": {
+              "1": "All time",
+              "2": "This year",
+              "3": "This month",
+              "4": "This week"
+            }
+          },
+          "pf": "Percent from",
+          "sf": "Subscribers from"
+        },
+        "title": "Analyze the topic",
+        "select": "Select",
+        "results": "Results",
+        "notFound": "No results found. Try changing your query.",
+        "subBlock": {
+          "button": "Generate title",
+          "text": "Choose one or more relevant signals and the system will generate an ideal title for your future video",
+          "buttonGeneratingTitles": "Generating titles"
+        }
+      },
+      "notification": {
+        "limitChannel": "You have reached the limit of adding channels to the base",
+        "limitChannelSub": "Select another base or remove some channel from the current base"
+      }
+    },
+    "preview": {
+      "stepsData": {
+        "title": "Be the first to spot trends!",
+        "description1": "See how your video will look, choosing different headlines and previews.",
+        "description2": "Expand the miniature to see how your video looks among others and attracts attention.",
+        "description3": "Save the result in PDF format for further production of the video. All your previous versions are preserved and always available."
+      },
+      "search": "Search",
+      "title": "Previous preview",
+      "button": "Create new preview",
+      "card": {
+        "refreshTooltip": "Regenerate preview",
+        "deleteThumbnail": "Delete thumbnail",
+        "button": "Download",
+        "mainBlock": {
+          "button": "Preview"
+        },
+        "titles": {
+          "subTitle": "Titles",
+          "button": "Regenerate",
+          "items": "characters"
+        },
+        "description": {
+          "title": "Description",
+          "input_placeholder": "Enter video description"
+        },
+        "thumbnails": {
+          "title": "Thumbnails Test",
+          "optionsTitle": "Option",
+          "newTest": {
+            "title": "Add new test",
+            "text": "Add another option for A/B image testing"
+          }
+        },
+        "notes": {
+          "title": "Notes",
+          "input_placeholder": "Enter your text"
+        },
+        "fileInputText": "Select or drag image here",
+        "saving": "Saving",
+        "saved": "Saved",
+        "copy_link": "Copy link and make it public",
+        "copied": "Copied",
+        "not_found": "Card not found",
+        "export_pdf": "Export to PDF"
+      },
+      "back": "Back"
+    },
+    "preview-generator": {
+      "title": "Preview"
+    },
+    "timestamps": {
+      "stepsData": {
+        "title": "Generate timestamps automatically",
+        "description1": "Upload a video via link, from your device, or connect a YouTube channel (recommended for fast access)",
+        "description2": "After upload, choose the preferred timestamp interval length to better match the video structure",
+        "description3": "Choose the video style and click 'Add Timestamps' to generate them automatically"
+      },
+      "search": "Search",
+      "filters": {
+        "title": "Filters",
+        "lv": "Local videos",
+        "ready": "Ready",
+        "date": "Date",
+        "name": "Name"
+      },
+      "title": "Select video for Timestamps",
+      "fileInputText": "Select or drop file here",
+      "linkInput_placeholder": "Place your link here",
+      "addOtherVideo": "Add other video",
+      "or": "OR",
+      "subBlock": {
+        "title": "This is Timestamps",
+        "text": "Timestamps help viewers quickly find the most interesting parts of your video. Our tools automatically analyze content and create accurate markers to highlight key moments, chapters, and topics — improving engagement, navigation, and saving time.",
+        "button": "Select video or add new",
+        "buttonAction": "Create Timestamps",
+        "settings": {
+          "input": {
+            "title": "Timing between tags",
+            "input_placeholder": "10 min"
+          },
+          "select": {
+            "title": "Content type",
+            "options": {
+              "1": "Blog",
+              "2": "Podcast",
+              "3": "Entertainment"
+            }
+          }
+        }
+      },
+      "edit": {
+        "timestampsList": {
+          "items": "timestamps",
+          "buttonYT": "Connect YouTube channel"
+        },
+        "selectBlock": {
+          "title": "Select videos",
+          "text": "Select more videos"
+        }
+      }
+    },
+    "subscription": {
+      "title": "Current Plan",
+      "titleModal": "Select plan",
+      "titleModalDescription": "To continue, select the plan that suits you and pay for it",
+      "monthlyBilling": "Monthly billing",
+      "yearlyBilling": "Yearly billing",
+      "active": "Active",
+      "upgradePlan": "Upgrade Plan",
+      "planInfo": "Plan Information",
+      "billedMonthly": "Billed monthly",
+      "billedYearly": "Billed yearly",
+      "usageDetails": "Included",
+      "remainingTokens": "Remaining Tokens",
+      "included": "Included",
+      "analyzerLimits": "Analyzer Limits",
+      "upgrade": "Upgrade",
+      "basicPlanFeatures": "Available features",
+      "limitedTokens": "Limited tokens",
+      "generalCommercialTerms": "General commercial terms",
+      "optionalCreditsTopUps": "Optional credit top ups",
+      "threeConcurrentFastJobs": "3 concurrent fast jobs",
+      "billingPayment": "Billing & Payment",
+      "price": "Price",
+      "billingPeriod": "Billing Period",
+      "renewalDate": "Renewal Date",
+      "editBilling": "Edit Billing",
+      "changePlan": "Change Plan",
+      "basicPlan": "Basic Plan",
+      "standardPlan": "Standard Plan",
+      "proPlan": "Professional Plan",
+      "nextPlan": "Next Plan",
+      "planName": "Plan Name",
+      "activeFrom": "Active From",
+      "enterPromoCode": "Enter Promo Code",
+      "promoCodeDescription": "If you have a promo code, enter it to get a discount",
+      "promoCodePlaceholder": "Enter promo code",
+      "applyPromoCode": "Apply",
+      "noPromoCode": "No Promo Code",
+      "byClickingButton": "By clicking the button, you agree to the",
+      "termsOfService": "Terms of Service",
+      "cancelPlan": "Cancel Plan",
+      "cancelPlanDescription": "You can cancel your plan at any time. This will not affect your current subscription.",
+      "renewPlan": "If you renew your plan, the unused tokens will be lost.",
+      "moreDetails": "More details",
+      "free": "Free",
+      "periods": {
+        "month": "month",
+        "year": "year"
+      },
+      "plans": {
+        "free": {
+          "title": "Free Plan",
+          "description": "For those who want to try the platform"
+        },
+        "basic": {
+          "title": "Basic Plan",
+          "description": "For those who want to try the platform"
+        },
+        "pro": {
+          "title": "Professional Plan",
+          "description": "For those who want to try the platform"
+        }
+      },
+      "cards": {
+        "title": "My Cards",
+        "addNewCard": "Add new card",
+        "cardNumber": "Card number",
+        "expDate": "MM/YY",
+        "cvv": "CVV",
+        "addCard": "Add card",
+        "adding": "Adding...",
+        "myCards": "My Cards",
+        "usedForPayment": "Used for payment",
+        "select": "Select",
+        "delete": "Delete"
+      },
+      "paymentSuccess": {
+        "title": "Payment successful",
+        "description": "Your subscription has been activated. Now you can use all the benefits of the selected plan.",
+        "backToSubscriptions": "Back to subscriptions",
+        "goToDashboard": "Go to dashboard",
+        "redirecting": "You will be redirected to the subscriptions page in {{seconds}} seconds"
+      },
+      "paymentFailed": {
+        "title": "Payment failed",
+        "description": "Unfortunately, an error occurred while processing the payment. Please try again or contact support.",
+        "tryAgain": "Try again",
+        "contactSupport": "Contact support"
+      },
+      "notifications": {
+        "pageWillReload": "The page will be reloaded",
+        "renewSuccess": "Subscription successfully renewed",
+        "renewError": "Error renewing subscription",
+        "restoreSuccess": "Subscription successfully restored",
+        "restoreError": "Error restoring subscription",
+        "changeSuccess": "Subscription successfully changed",
+        "changeError": "Error changing subscription",
+        "cancelSuccess": "Subscription successfully canceled",
+        "cancelError": "Error canceling subscription",
+        "tryAgain": "Try again",
+        "promoSuccess": "Promo code applied successfully",
+        "promoApplied": "Promo code applied successfully",
+        "redirectingToPayment": "Redirecting to payment",
+        "promoError": "Error applying promo code or promo code is not valid",
+        "promoErrorUsed": "Promo code is already used",
+        "tryAgainAnotherCode": "Try another promo code",
+        "comingSoon": "Coming soon",
+        "comingSoonText": "This feature will be available soon",
+        "planNotAvailable": "Plan not available",
+        "planComingSoon": "Plan will be available soon",
+        "authRequired": "Authentication Required",
+        "pleaseLogin": "Please log in to access subscriptions"
+      }
+    }
+  }
+}

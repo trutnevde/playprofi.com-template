@@ -1,0 +1,233 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  scroll-behavior: smooth;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+@layer base {
+  @font-face {
+    font-family: "Circe Regular";
+    font-style: normal;
+    font-weight: 600;
+
+    src:
+      local("Circe Regular"),
+      url("/src/shared/assets/fonts/Circe-Regular.woff") format("woff");
+  }
+
+  @font-face {
+    font-family: "Circe Bold";
+    font-style: bold;
+    font-weight: 400;
+
+    /* Браузер сначала попробует найти шрифт локально */
+    src:
+      local("Circe Bold"),
+      url("/src/shared/assets/fonts/Circe-Bold.woff") format("woff");
+  }
+
+  @font-face {
+    font-family: "Circe Light";
+    font-style: light;
+    font-weight: 100;
+
+    /* Браузер сначала попробует найти шрифт локально */
+    src:
+      local("Circe Light"),
+      url("/src/shared/assets/fonts/Circe-Light.woff") format("woff");
+  }
+}
+
+body {
+  *p {
+    font-family: "Circe Regular";
+  }
+
+  h3 {
+    font-family: "Circe Light";
+  }
+
+  background-color: #0f0f0f;
+
+  /* Стилизация полосы прокрутки */
+  ::-webkit-scrollbar {
+    cursor: pointer;
+    width: 6px; /* Ширина вертикальной полосы */
+    background-color: rgb(27, 27, 27);
+  }
+
+  /* Цвет бегунка полосы прокрутки */
+  ::-webkit-scrollbar-thumb {
+    cursor: pointer;
+    background: #878787; /* Цвет бегунка */
+    border-radius: 4px; /* Скругление бегунка */
+  }
+
+  /* Цвет бегунка при наведении */
+  ::-webkit-scrollbar-thumb:hover {
+    background: #5f5f5f; /* Цвет бегунка при наведении */
+  }
+
+  /* Firefox (scrollbar-width) */
+  body {
+    scrollbar-width: thin; /* Тонкая полоса */
+    scrollbar-color: #29e4de #1a1a1a; /* Цвет бегунка и трека */
+  }
+}
+
+/* Custom scrollbar styles */
+::-webkit-scrollbar {
+  cursor: pointer;
+  width: 3px;
+  height: 0px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #888;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+::-webkit-scrollbar-button {
+  display: none;
+}
+
+.slick-dots li.slick-active button:before {
+  border-radius: 50%;
+  background: transparent;
+}
+
+.slick-dots li button:before {
+  width: 0px;
+  height: 0px;
+  font-size: 8px !important;
+  border-radius: 50%;
+  color: #29e4de !important; /* Цвет активной точки */
+  position: absolute;
+}
+
+/* 🛠 Убираем баг со скрытием ползунка */
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  background-color: #29e4de; /* Цвет main-accent */
+  border-radius: 50%;
+  cursor: pointer;
+  transition: 0.2s ease-in-out;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  background-color: #29e4de; /* Цвет main-accent */
+  border-radius: 50%;
+  cursor: pointer;
+  transition: 0.2s ease-in-out;
+}
+
+/* 🛠 Добавляем основной стиль range */
+.range-slider {
+  appearance: none;
+  height: 5px;
+  background: linear-gradient(
+    to right,
+    #29e4de 0%,
+    #29e4de calc((var(--value) - var(--min)) / (var(--max) - var(--min)) * 100%),
+    rgb(50, 50, 50)
+      calc((var(--value) - var(--min)) / (var(--max) - var(--min)) * 100%),
+    rgb(50, 50, 50) 100%
+  );
+  border-radius: 8px;
+  outline: none;
+  cursor: pointer;
+}
+
+/* 🛠 Делаем кружок больше при наведении */
+.range-slider::-webkit-slider-thumb:hover {
+  width: 14px;
+  height: 14px;
+}
+
+.range-slider::-moz-range-thumb:hover {
+  width: 14px;
+  height: 14px;
+}
+
+@font-face {
+  font-family: "DejaVu Sans";
+  src: url("https://kendo.cdn.telerik.com/2017.2.621/styles/fonts/DejaVu/DejaVuSans.ttf")
+    format("truetype");
+}
+
+@font-face {
+  font-family: "DejaVu Sans";
+  font-weight: bold;
+  src: url("https://kendo.cdn.telerik.com/2017.2.621/styles/fonts/DejaVu/DejaVuSans-Bold.ttf")
+    format("truetype");
+}
+
+@font-face {
+  font-family: "DejaVu Sans";
+  font-style: italic;
+  src: url("https://kendo.cdn.telerik.com/2017.2.621/styles/fonts/DejaVu/DejaVuSans-Oblique.ttf")
+    format("truetype");
+}
+
+@font-face {
+  font-family: "DejaVu Sans";
+  font-weight: bold;
+  font-style: italic;
+  src: url("https://kendo.cdn.telerik.com/2017.2.621/styles/fonts/DejaVu/DejaVuSans-Oblique.ttf")
+    format("truetype");
+}
+
+.line-clamp {
+  display: -webkit-box;
+  -webkit-line-clamp: 1; /* Ограничиваем до 2 строк */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.single-line-ellipsis {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Общий запрос под MacBook с Retina (все модели) */
+/* @media
+(-webkit-min-device-pixel-ratio: 2) and
+(min-resolution: 192dpi) and
+(min-width: 1400px) and (max-width: 1800px) {
+    body {
+        zoom: 0.8;
+    } */
+
+/* Для Firefox (если нужно) */
+/* @-moz-document url-prefix() {
+        html {
+            transform: scale(0.8);
+            transform-origin: top left;
+            width: 125%;
+            height: 125%;
+            overflow-x: hidden;
+        }
+    }
+} */
