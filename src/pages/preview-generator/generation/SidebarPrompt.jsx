@@ -1,6 +1,24 @@
 import { useState, useRef, useEffect } from "react";
-import { FaImage, FaPlus, FaCaretDown, FaVideo } from "react-icons/fa";
+import { FaImage, FaPlus, FaVideo } from "react-icons/fa";
 import SvgHeart from "../../../shared/components/icons/Heart";
+import { orientationOptions } from "../PreviewGeneratorPage";
+import IconGem from "../../../shared/assets/icons/gem.svg?react";
+
+import { Trash } from "iconsax-react";
+import { FaChevronDown } from "react-icons/fa6";
+
+function resolveSrc(src) {
+  if (typeof src === "string") {
+    return src;
+  }
+  if (src?.default) {
+    return src.default;
+  }
+  if (src?.src) {
+    return src.src;
+  }
+  return "";
+}
 
 export const SidebarPrompt = ({
   prompt,
@@ -10,11 +28,14 @@ export const SidebarPrompt = ({
   selectedFormat,
   onFormatChange,
   onCreate,
+  references,
 }) => {
   const [isRefMenuOpen, setIsRefMenuOpen] = useState(false);
   const [isFormatMenuOpen, setIsFormatMenuOpen] = useState(false);
   const refMenuRef = useRef(null);
   const formatMenuRef = useRef(null);
+
+  const [previewSrc, setPreviewSrc] = useState(null);
 
   // Закрыть меню при клике вне
   useEffect(() => {
@@ -30,33 +51,84 @@ export const SidebarPrompt = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  console.log(references);
+
   return (
     <>
-      <div className="group flex flex-grow flex-col rounded-xl border-[0.5px] border-white border-opacity-0 bg-dark-graphite transition-colors duration-300 hover:border-opacity-30 has-[:focus]:border-opacity-30">
+      <div className="group flex h-full flex-grow flex-col rounded-xl border-[0.5px] border-white border-opacity-0 bg-dark-graphite transition-colors duration-300 hover:border-opacity-30 has-[:focus]:border-opacity-30">
         {/* Добавление референса + выбор формата */}
         <div className="box-content flex h-8 items-center justify-between gap-2 border-b-[0.5px] border-white border-opacity-30 px-3 py-1 text-sm text-gray">
           {/* Меню "Добавить референс" */}
-          <div className="relative" ref={refMenuRef}>
+          <div className="relative max-h-full" ref={refMenuRef}>
             <button
-              className={`h-full cursor-pointer px-2 transition-colors duration-300 ${isRefMenuOpen ? "text-main-accent" : ""}`}
+              className={`h-full max-h-full cursor-pointer px-2 transition-colors duration-300 ${isRefMenuOpen ? "text-main-accent" : ""}`}
               onClick={() => setIsRefMenuOpen((prev) => !prev)}
             >
               <label
-                className={`flex cursor-pointer items-center justify-center gap-2 ${
+                className={`flex max-h-full cursor-pointer items-center justify-center gap-2 overflow-hidden ${
                   isRefMenuOpen ? "text-main-accent" : ""
                 }`}
               >
-                <FaImage />
-                <span className="transition-colors duration-300 hover:text-main-accent">
-                  Добавить референс
-                </span>
+                {(!previewSrc && (
+                  <>
+                    <FaImage />
+                    <span className="transition-colors duration-300 hover:text-main-accent">
+                      Добавить референс
+                    </span>
+                  </>
+                )) || (
+                  <>
+                    <div className="max-h-8 max-w-8 overflow-hidden rounded-sm border border-white/20">
+                      <img
+                        className="max-h-full max-w-full object-cover"
+                        src={previewSrc}
+                        alt=""
+                      />
+                    </div>
+                    <span
+                      className="max-w-[140px] truncate text-main-accent transition-colors duration-300"
+                      title={
+                        typeof previewSrc === "string"
+                          ? previewSrc
+                          : previewSrc.name
+                      }
+                    >
+                      {typeof previewSrc === "string"
+                        ? previewSrc.split("/").pop()
+                        : previewSrc.name}
+                    </span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPreviewSrc(null);
+                        onReferenceChange && onReferenceChange(null);
+                      }}
+                      className=""
+                      title="Удалить"
+                    >
+                      <Trash className="hover:fill-white" />
+                    </button>
+                  </>
+                )}
               </label>
             </button>
             {isRefMenuOpen && (
-              <div className="absolute right-0 top-full flex w-max gap-1 rounded-2xl bg-interactive-hover p-3 shadow-lg-hover-card">
+              <div className="absolute right-0 top-full z-40 flex w-max gap-1 rounded-2xl bg-interactive-hover p-3 shadow-lg-hover-card">
                 <label className="flex min-w-max cursor-pointer flex-col items-center justify-center rounded-xl bg-dark-coal p-3 text-center text-gray">
                   <FaPlus size={28} className="fill-white opacity-30" />
-                  <input type="file" className="hidden" />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const url = URL.createObjectURL(file);
+                        setPreviewSrc(url);
+                        onReferenceChange && onReferenceChange(file);
+                      }
+                    }}
+                  />
                   <p className="leading-normal text-main-accent underline">
                     Выберите файл
                   </p>
@@ -66,99 +138,40 @@ export const SidebarPrompt = ({
                     перетащите с устройства
                   </p>
                 </label>
-                <div className="grid max-h-[230px] flex-shrink-0 flex-grow grid-cols-2 gap-1 overflow-y-scroll pr-1">
-                  <div className="flex max-w-[128px] flex-col gap-1">
-                    <div className="max-w-full overflow-hidden rounded-lg">
-                      <img
-                        src="https://placehold.co/130x75"
-                        className="h-full w-full object-cover"
-                        alt=""
-                      />
-                    </div>
-                    <div className="max-w-full overflow-hidden rounded-lg">
-                      <img
-                        src="https://placehold.co/130x75"
-                        className="h-full w-full object-cover"
-                        alt=""
-                      />
-                    </div>
-                    <div className="max-w-full overflow-hidden rounded-lg">
-                      <img
-                        src="https://placehold.co/130x75"
-                        className="h-full w-full object-cover"
-                        alt=""
-                      />
-                    </div>
-                  </div>
-                  <div className="flex max-w-[128px] flex-col gap-1">
-                    <div className="max-w-full overflow-hidden rounded-lg">
-                      <img
-                        src="https://placehold.co/130x75"
-                        className="h-full w-full object-cover"
-                        alt=""
-                      />
-                    </div>
-                    <div className="max-w-full overflow-hidden rounded-lg">
-                      <img
-                        src="https://placehold.co/130x75"
-                        className="h-full w-full object-cover"
-                        alt=""
-                      />
-                    </div>
-                    <div className="max-w-full overflow-hidden rounded-lg">
-                      <img
-                        src="https://placehold.co/130x75"
-                        className="h-full w-full object-cover"
-                        alt=""
-                      />
-                    </div>
-                  </div>
-                  <div className="flex max-w-[128px] flex-col gap-1">
-                    <div className="max-w-full overflow-hidden rounded-lg">
-                      <img
-                        src="https://placehold.co/130x75"
-                        className="h-full w-full object-cover"
-                        alt=""
-                      />
-                    </div>
-                    <div className="max-w-full overflow-hidden rounded-lg">
-                      <img
-                        src="https://placehold.co/130x75"
-                        className="h-full w-full object-cover"
-                        alt=""
-                      />
-                    </div>
-                    <div className="max-w-full overflow-hidden rounded-lg">
-                      <img
-                        src="https://placehold.co/130x75"
-                        className="h-full w-full object-cover"
-                        alt=""
-                      />
-                    </div>
-                  </div>
-                  <div className="flex max-w-[128px] flex-col gap-1">
-                    <div className="max-w-full overflow-hidden rounded-lg">
-                      <img
-                        src="https://placehold.co/130x75"
-                        className="h-full w-full object-cover"
-                        alt=""
-                      />
-                    </div>
-                    <div className="max-w-full overflow-hidden rounded-lg">
-                      <img
-                        src="https://placehold.co/130x75"
-                        className="h-full w-full object-cover"
-                        alt=""
-                      />
-                    </div>
-                    <div className="max-w-full overflow-hidden rounded-lg">
-                      <img
-                        src="https://placehold.co/130x75"
-                        className="h-full w-full object-cover"
-                        alt=""
-                      />
-                    </div>
-                  </div>
+                <div className="z-40 grid max-h-[230px] flex-shrink-0 flex-grow grid-cols-2 gap-1 overflow-y-scroll pr-1">
+                  {references
+                    .flatMap((group) => group.items || [])
+                    .map((item, index) => {
+                      // Извлекаем строку URL из item.src
+                      let url = "";
+                      if (typeof item.src === "string") {
+                        url = item.src;
+                      } else if (item.src?.default) {
+                        url = item.src.default;
+                      } else if (item.src?.src) {
+                        url = item.src.src;
+                      } else {
+                        console.warn("Не могу распаковать src из", item.src);
+                      }
+
+                      return (
+                        <div
+                          key={index}
+                          className="max-w-[128px] cursor-pointer overflow-hidden rounded-lg transition hover:ring-2 hover:ring-main-accent"
+                          onClick={() => {
+                            setPreviewSrc(url);
+                            onReferenceChange?.(url);
+                            setIsRefMenuOpen(false);
+                          }}
+                        >
+                          <img
+                            src={url}
+                            className="h-full w-full object-cover"
+                            alt={`Ref ${index + 1}`}
+                          />
+                        </div>
+                      );
+                    })}
                 </div>
               </div>
             )}
@@ -169,69 +182,38 @@ export const SidebarPrompt = ({
               className={`flex items-center gap-2 transition-colors duration-300 ${isFormatMenuOpen ? "text-white" : ""}`}
               onClick={() => setIsFormatMenuOpen((prev) => !prev)}
             >
-              <span>Формат {selectedFormat}</span>
-              <FaCaretDown />
+              <span>Формат ({orientationOptions[selectedFormat].label})</span>
+              <FaChevronDown />
             </button>
             {isFormatMenuOpen && (
               <div className="absolute right-0 top-full z-10 mt-2 flex w-max flex-col overflow-hidden rounded-2xl bg-dark-graphite shadow-lg-hover-card">
-                <button
-                  className="flex items-center justify-between gap-4 stroke-white px-4 py-3 hover:bg-dark-supporting hover:stroke-main-accent"
-                  onClick={() => {
-                    onFormatChange("16:9");
-                    setIsFormatMenuOpen(false);
-                  }}
-                >
-                  <div className="flex flex-grow flex-col text-left text-sm leading-tight text-white">
-                    <span className="block">YouTube. Обложка видео</span>
-                    <span className="block">1280×720 (16:9)</span>
-                  </div>
-                  <svg
-                    width="65"
-                    height="36"
-                    viewBox="0 0 65 36"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <rect
-                      x="1.25"
-                      y="0.5"
-                      width="63"
-                      height="35"
-                      rx="7.5"
-                      strokeDasharray="4 4"
-                    />
-                  </svg>
-                </button>
-                <button
-                  className="preview-format-button flex items-center justify-between gap-4 stroke-white px-4 py-3 hover:bg-dark-supporting hover:stroke-main-accent"
-                  onClick={() => {
-                    onFormatChange("9:16");
-                    setIsFormatMenuOpen(false);
-                  }}
-                >
-                  <div className="flex flex-grow flex-col text-left text-sm leading-tight text-white">
-                    <span className="block">YouTube. Обложка видео</span>
-                    <span className="block">720×1280 (9:16)</span>
-                  </div>
-                  <div className="flex justify-end opacity-70">
-                    <svg
-                      width="25"
-                      height="42"
-                      viewBox="0 0 25 42"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <rect
-                        x="0.75"
-                        y="1"
-                        width="23"
-                        height="40"
-                        rx="8"
-                        strokeDasharray="2 2"
-                      />
-                    </svg>
-                  </div>
-                </button>
+                {Object.entries(orientationOptions).map(
+                  ([key, { fullLabel, preview }]) => {
+                    const [title, subtitle] = fullLabel.split("\n");
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => {
+                          onFormatChange(key);
+                          setIsFormatMenuOpen(false);
+                        }}
+                        className="group/promptFormat flex items-center justify-between gap-4 stroke-white px-4 py-3 text-left hover:bg-dark-supporting"
+                      >
+                        <div className="flex flex-col text-sm leading-tight text-white">
+                          <span className="group-hover/promptFormat:text-main-accent">
+                            {title}
+                          </span>
+                          <span className="group-hover/promptFormat:text-main-accent">
+                            {subtitle}
+                          </span>
+                        </div>
+                        <div className="flex-shrink-0 opacity-70 group-hover/promptFormat:stroke-main-accent">
+                          {preview}
+                        </div>
+                      </button>
+                    );
+                  },
+                )}
               </div>
             )}
           </div>
@@ -240,7 +222,7 @@ export const SidebarPrompt = ({
         {/* Сам запрос */}
         <textarea
           className="flex-grow resize-none bg-transparent p-3 text-sm text-white outline-none placeholder:text-gray"
-          placeholder="Напиши запрос"
+          placeholder="Напиши запрос и AI сгенерирует 3 варианта обложки"
           value={prompt}
           onChange={(e) => onPromptChange(e.target.value)}
         />
@@ -253,7 +235,7 @@ export const SidebarPrompt = ({
       >
         <span>Создать обложку</span>
         <span className="ml-1 flex items-center gap-1">
-          <SvgHeart />
+          <IconGem />
           30
         </span>
       </button>

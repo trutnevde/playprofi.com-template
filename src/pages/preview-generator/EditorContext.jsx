@@ -1,85 +1,59 @@
 import { createContext, useContext, useState } from "react";
 import { FaImage, FaSyncAlt, FaTrash } from "react-icons/fa";
 
+import TextBold from "../../shared/assets/icons/text-bold.svg?react";
+import PhotoCog from "../../shared/assets/icons/photo-cog.svg?react";
+import EmojiHappy from "../../shared/assets/icons/emoji-happy.svg?react";
+import Image from "../../shared/assets/icons/image.svg?react";
+import Square from "../../shared/assets/icons/square.svg?react";
+import Eraser from "../../shared/assets/icons/eraser.svg?react";
+import Sticker from "../../shared/assets/icons/sticker.svg?react";
+
 // Список всех возможных инструментов (кроме crop)
 export const TOOL_KEYS = [
   {
     key: "text",
-    icon: <span className="text-lg font-bold">T</span>,
+    icon: (
+      <span className="text-lg font-bold">
+        <TextBold />
+      </span>
+    ),
     label: "Текст",
+    useStroke: false,
   },
-  { key: "effects", icon: <FaSyncAlt />, label: "Эффекты" },
+  { key: "effects", icon: <PhotoCog />, label: "Эффекты", useStroke: false },
   {
     key: "emoji",
-    icon: <span className="text-2xl">😊</span>,
+    icon: (
+      <span className="text-2xl">
+        <EmojiHappy />
+      </span>
+    ),
     label: "Эмоджи",
+    useStroke: false,
   },
-  { key: "image", icon: <FaImage />, label: "Картинка" },
+  { key: "image", icon: <Image />, label: "Картинка", useStroke: false },
   {
     key: "shapes",
-    icon: <span className="text-xl">◻︎</span>,
+    icon: (
+      <span className="text-xl">
+        <Square />
+      </span>
+    ),
     label: "Фигуры",
+    useStroke: false,
   },
-  { key: "eraser", icon: <FaTrash />, label: "Ластик" },
+  { key: "eraser", icon: <Eraser />, label: "Ластик", useStroke: false },
   {
     key: "sticker",
-    icon: <span className="text-2xl">📌</span>,
+    icon: (
+      <span className="text-2xl">
+        <Sticker />
+      </span>
+    ),
     label: "Наклейка",
+    useStroke: false,
   },
-  {
-    key: "background",
-    icon: <span className="text-2xl">🖌</span>,
-    label: "Фон",
-  },
-];
-
-// Опции crop-аспектов
-export const CROP_ASPECTS = [
-  {
-    aspect: "16:9",
-    title: "(16:9)",
-    icon: (
-      <svg
-        width="21"
-        height="12"
-        viewBox="0 0 21 12"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <rect
-          x="0.5"
-          y="0.5"
-          width="20"
-          height="11"
-          rx="1.5"
-          strokeDasharray="4 4"
-        />
-      </svg>
-    ),
-  },
-  {
-    aspect: "9:16",
-    title: "(9:16)",
-    icon: (
-      <svg
-        width="9"
-        height="16"
-        viewBox="0 0 9 16"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <rect
-          x="1"
-          y="1.33398"
-          width="7.5"
-          height="13.3333"
-          rx="2"
-          strokeDasharray="2 2"
-        />
-      </svg>
-    ),
-  },
-  { aspect: "free", title: "Произвольный", icon: "" },
 ];
 
 const EditorContext = createContext(null);

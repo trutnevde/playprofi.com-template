@@ -70,6 +70,7 @@ export default {
         "dark-supporting": "rgb(33 33 33)",
         "dark-overlay": "rgba(15, 15, 15, 0.6 )",
         "interactive-hover": "rgba(43, 43, 43, 1)",
+        "interactive-active": "rgba(69, 69, 69, 1)",
       },
       keyframes: {
         levitation: {

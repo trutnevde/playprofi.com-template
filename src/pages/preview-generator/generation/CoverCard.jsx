@@ -1,16 +1,26 @@
 import { FaDownload, FaEdit, FaHeart } from "react-icons/fa";
+import { orientationOptions } from "../PreviewGeneratorPage";
+import IconEdit from "../../../shared/assets/icons/edit.svg?react";
+import IconHeart from "../../../shared/assets/icons/heart-outline.svg?react";
+import IconDownload from "../../../shared/assets/icons/download-2.svg?react";
 
 // Карточка обложки
 export const CoverCard = ({
   src,
   loading,
-  orientation,
+  aspect = "16:9",
   onEdit,
   onLike,
   onDownload,
 }) => {
-  const classes =
-    orientation === "vertical" ? "aspect-[9/16]" : "aspect-[16/9]";
+  // базовый tailwind-класс для aspect
+  const baseClass =
+    orientationOptions[aspect]?.className ||
+    orientationOptions["16:9"].className;
+
+  // для вертикальных: ограничиваем max-width так, чтобы
+  // высота равнялась ширине горизонталки (примерно 220px)
+  const extra = aspect === "9:16" ? " max-w-[220px]" : "";
 
   const CardIcon = ({ children, onClick, title }) => {
     return (
@@ -28,7 +38,7 @@ export const CoverCard = ({
 
   return (
     <div
-      className={`group/coverCard relative cursor-pointer rounded-md ${classes}`}
+      className={`group/coverCard relative cursor-pointer rounded-md ${baseClass}${extra}`}
     >
       <div className="h-full w-full overflow-hidden rounded-[20px]">
         {loading ? (
@@ -40,15 +50,15 @@ export const CoverCard = ({
 
       {/* иконки поверх карточки */}
       {!loading && (
-        <div className="absolute right-2 top-2 z-30 flex gap-2 opacity-0 transition-opacity duration-300 group-hover/coverCard:opacity-100">
+        <div className="absolute right-2 top-2 z-10 flex gap-2 opacity-0 transition-opacity duration-300 group-hover/coverCard:opacity-100">
           <CardIcon title={"Добавить в избранное"}>
-            <FaHeart size={16} />
+            <IconHeart />
           </CardIcon>
           <CardIcon title={"Редактировать"} onClick={onEdit}>
-            <FaEdit size={16} />
+            <IconEdit />
           </CardIcon>
           <CardIcon title={"Скачать"}>
-            <FaDownload size={16} />
+            <IconDownload />
           </CardIcon>
         </div>
       )}
