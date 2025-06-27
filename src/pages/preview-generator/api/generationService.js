@@ -20,7 +20,7 @@ export async function regenerateGroup(groupId) {
 const GenCtx = createContext(null);
 
 export function GenerationsProvider({ children }) {
-  const gen = useGenerations();
+  const gen = useGenerationsCtx();
   return <GenCtx.Provider value={gen}>{children}</GenCtx.Provider>;
 }
 

@@ -285,33 +285,33 @@ const PreviewGeneratorPage = () => {
               />
             )}
           </div>
-          {activeFolder !== "templates" && (
-            <div
-              ref={refPromptPanel}
-              className="sticky top-0 flex h-full w-full max-w-[500px] flex-col rounded-[20px] bg-dark-coal p-3"
-            >
-              {editorOpen ? (
-                <EditorSidebar
-                  image={editorImage}
-                  activeTool={activeTool}
-                  onToolChange={setActiveTool}
-                  onClose={() => setEditorOpen(false)}
-                  references={myTemplateGroups}
-                />
-              ) : (
-                <SidebarPrompt
-                  prompt={prompt}
-                  onPromptChange={setPrompt}
-                  selectedReference={selectedReference}
-                  onReferenceChange={setSelectedReference}
-                  selectedFormat={selectedFormat}
-                  onFormatChange={setSelectedFormat}
-                  onCreate={handleCreate}
-                  references={myTemplateGroups}
-                />
-              )}
-            </div>
-          )}
+
+          <div
+            ref={refPromptPanel}
+            className="sticky top-0 flex h-full w-full max-w-[500px] flex-col rounded-[20px] bg-dark-coal p-3"
+          >
+            {editorOpen && (
+              <EditorSidebar
+                image={editorImage}
+                activeTool={activeTool}
+                onToolChange={setActiveTool}
+                onClose={() => setEditorOpen(false)}
+                references={myTemplateGroups}
+              />
+            )}
+            {activeFolder !== "templates" && !editorOpen && (
+              <SidebarPrompt
+                prompt={prompt}
+                onPromptChange={setPrompt}
+                selectedReference={selectedReference}
+                onReferenceChange={setSelectedReference}
+                selectedFormat={selectedFormat}
+                onFormatChange={setSelectedFormat}
+                onCreate={handleCreate}
+                references={myTemplateGroups}
+              />
+            )}
+          </div>
         </div>
       </div>
     </EditorProvider>
