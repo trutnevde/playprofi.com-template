@@ -3,17 +3,33 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import SQLModel, Field, Relationship, Session, create_engine, select
 from sqlalchemy import Column, JSON
 from pydantic import BaseModel
+from pydantic_settings import BaseSettings
 from typing import List, Optional
 import httpx
 import os
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 import asyncio
+import logging
 
-load_dotenv()
+logger = logging.getLogger('uvicorn.error')
+logger.setLevel(logging.DEBUG)
+
+
+class Settings(BaseSettings):
+    flux_api_key: str
+    flux_endpoint: str = "https://api.bfl.ai/v1/flux-kontext-pro"
+
+    class Config:
+        env_file = ".env"
+        env_file_encoding = "utf-8"
+
+settings = Settings()
 
 # --- Flux config ---
-FLUX_API_KEY = os.getenv("FLUX_API_KEY")
-FLUX_ENDPOINT = "https://api.bfl.ai/v1/flux-kontext-pro"
+FLUX_API_KEY = settings.flux_api_key
+FLUX_ENDPOINT = settings.flux_endpoint
+
+print(settings)
 
 async def call_flux(
     prompt: str,
@@ -28,6 +44,13 @@ async def call_flux(
       2. GET polling_url?id=… пока status != Ready
       3. Возвращает список URL изображений
     """
+
+    FLUX_API_KEY = 'bc4fe6fa-c015-4bd6-be80-b1d059b95aa4'
+    FLUX_ENDPOINT = "https://api.bfl.ai/v1/flux-kontext-pro"
+
+    if not FLUX_API_KEY:
+        raise RuntimeError(f"FLUX_API_KEY is not set. {settings}")
+
     headers = {
         "accept": "application/json",
         "x-key": FLUX_API_KEY,
@@ -40,9 +63,15 @@ async def call_flux(
         **({"reference": reference} if reference else {}),
     }
 
+    logger.debug(f"Using headers={headers!r}")
+    logger.debug(f"Using payload={payload!r}")
+
     async with httpx.AsyncClient(timeout=60) as client:
         # 1) отправляем запрос на генерацию
         resp = await client.post(FLUX_ENDPOINT, json=payload, headers=headers)
+        if resp.status_code == 403:
+            body = await resp.aread()
+            raise HTTPException(502, detail=f"Flux API returned 403: {body.decode()}")
         resp.raise_for_status()
         data = resp.json()
         polling_url = data["polling_url"]
@@ -60,11 +89,16 @@ async def call_flux(
             pd = poll.json()
             status = pd.get("status")
             if status == "Ready":
-                # предположим, что API возвращает в поле result.sample список URL
                 imgs = pd.get("result", {}).get("sample", [])
-                return imgs if isinstance(imgs, list) else [imgs]
-            elif status in ("Error", "Failed"):
-                raise RuntimeError(f"Flux generation failed: {pd}")
+                if not isinstance(imgs, list):
+                    imgs = [imgs]
+                # убедимся, что ровно 3 — добавим заглушки или усекаем
+                imgs = imgs[:3]  
+                while len(imgs) < 3:
+                    imgs.append("https://placehold.co/600x600?text=Missing")
+
+                logger.debug(f"Flux returned {len(imgs)} image URLs: {imgs}")
+                return imgs
 
 # ── SQLModel ORM models ────────────────────────────────────────────────
 
@@ -76,7 +110,6 @@ async def call_flux(
 #         "https://placehold.co/600x400?text=Dummy+3",
 #     ]
 # ────────────────────────────────────────────────────────────────────────────
-
 
 class GeneratedCover(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -187,7 +220,7 @@ seed_data()
 
 # ── FastAPI application ────────────────────────────────────────────────
 
-app = FastAPI()
+app = FastAPI(debug=True)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -200,20 +233,23 @@ async def generate(req: GenerateRequest):
     if not req.prompt and req.mode == "ai":
         raise HTTPException(400, "Prompt is required for AI mode")
 
-    images = await call_flux(req.prompt, req.reference, req.format, req.mode)
-    gen = GeneratedCover(
-        prompt=req.prompt,
-        reference=req.reference,
-        format=req.format,
-        mode=req.mode,
-        images=images,
-    )
-    with Session(engine) as session:
-        session.add(gen)
-        session.commit()
-        session.refresh(gen)
+    try:
+        images = await call_flux(req.prompt, req.reference, req.format, req.mode)
+        gen = GeneratedCover(
+            prompt=req.prompt,
+            reference=req.reference,
+            format=req.format,
+            mode=req.mode,
+            images=images,
+        )
+        with Session(engine) as session:
+            session.add(gen)
+            session.commit()
+            session.refresh(gen)
 
-    return {"group_id": gen.id, "images": images}
+        return {"group_id": gen.id, "images": images}
+    except Exception as e:
+            raise HTTPException(status_code=502, detail=f"Flux error: {e}")
 
 @app.post("/api/regenerate/{group_id}", response_model=GenerateResponse)
 async def regenerate(group_id: int):
@@ -221,7 +257,7 @@ async def regenerate(group_id: int):
         gen = session.get(GeneratedCover, group_id)
         if not gen:
             raise HTTPException(404, "Group not found")
-    images = await call_flux(gen.prompt, gen.reference, gen.format, gen.mode)
+    images = await call_flux(gen.prompt, gen.reference, gen.format, gen.mode, settings)
     with Session(engine) as session:
         gen.images = images
         session.add(gen)

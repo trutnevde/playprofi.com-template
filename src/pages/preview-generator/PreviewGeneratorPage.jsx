@@ -164,28 +164,15 @@ const PreviewGeneratorPage = () => {
       });
       if (!resp.ok) throw new Error(await resp.text());
 
-      const { group_id, images } = await resp.json();
-
       // 3) Сразу перечитываем все AI-группы с бэка, чтобы получить свежие данные
       const updated = await fetch("/prevgen-api/generated").then((r) => {
         if (!r.ok) throw new Error(r.statusText);
         return r.json();
       });
 
-      // Приводим каждый массив URL → валидный объект { src, alt, aspect, loading: false }
-      const sanitized = updated.map((g) => ({
-        id: g.group_id,
-        title: g.title,
-        params: g.params,
-        items: g.images.map((url) => ({
-          src: url,
-          alt: "",
-          aspect: g.format,
-          loading: false,
-        })),
-      }));
+      console.log(updated);
 
-      setGeneratedGroups(sanitized);
+      setGeneratedGroups(updated);
       setActiveFolder("ai");
     } catch (err) {
       console.error("Generation error:", err);
@@ -285,12 +272,11 @@ const PreviewGeneratorPage = () => {
               />
             )}
           </div>
-
-          <div
-            ref={refPromptPanel}
-            className="sticky top-0 flex h-full w-full max-w-[500px] flex-col rounded-[20px] bg-dark-coal p-3"
-          >
-            {editorOpen && (
+          {editorOpen && (
+            <div
+              ref={refPromptPanel}
+              className="sticky top-0 flex h-full w-full max-w-[500px] flex-col rounded-[20px] bg-dark-coal p-3"
+            >
               <EditorSidebar
                 image={editorImage}
                 activeTool={activeTool}
@@ -298,8 +284,13 @@ const PreviewGeneratorPage = () => {
                 onClose={() => setEditorOpen(false)}
                 references={myTemplateGroups}
               />
-            )}
-            {activeFolder !== "templates" && !editorOpen && (
+            </div>
+          )}
+          {activeFolder !== "templates" && !editorOpen && (
+            <div
+              ref={refPromptPanel}
+              className="sticky top-0 flex h-full w-full max-w-[500px] flex-col rounded-[20px] bg-dark-coal p-3"
+            >
               <SidebarPrompt
                 prompt={prompt}
                 onPromptChange={setPrompt}
@@ -310,8 +301,8 @@ const PreviewGeneratorPage = () => {
                 onCreate={handleCreate}
                 references={myTemplateGroups}
               />
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </EditorProvider>

@@ -51,8 +51,6 @@ export const SidebarPrompt = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  console.log(references);
-
   return (
     <>
       <div className="group flex h-full flex-grow flex-col rounded-xl border-[0.5px] border-white border-opacity-0 bg-dark-graphite transition-colors duration-300 hover:border-opacity-30 has-[:focus]:border-opacity-30">
