@@ -1,6 +1,6 @@
 import { FaChevronUp, FaChevronDown } from "react-icons/fa";
 import { AccordionSelect, ColorPicker, NumberSpinner } from "./EditorSidebar";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import IconStrikenthrough from "../../../shared/assets/icons/letter-strikenthrough.svg?react";
 import IconUnderline from "../../../shared/assets/icons/letter-underline.svg?react";
@@ -27,6 +27,8 @@ import Shape3 from "../../../shared/assets/image/editor/shapes/triangle.svg?reac
 
 import IconGem from "../../../shared/assets/icons/gem.svg?react";
 import { FaPlus } from "react-icons/fa6";
+import { useLayers } from "../hooks/useLayers";
+import { uniqueId } from "lodash";
 
 // Текстовый инструмент
 export const TextToolPanel = () => {
@@ -272,23 +274,57 @@ export const ShapesToolPanel = () => (
   </div>
 );
 
-const STICKER_LIST = [
+const STICKERS = [
   { src: Sticker1, names: ["Red Arrow", "Красная стрелка"] },
   { src: Sticker2, names: ["Blue Arrow", "Голубая стрелка"] },
 ];
 
 // Sticker (Наклейки)
-export const StickerToolPanel = () => {
+export function StickerToolPanel({ groupId, imageId }) {
   const [query, setQuery] = useState("");
+  const { layers, init, addLayer, removeLayer, updateLayer } = useLayers(
+    groupId,
+    imageId,
+  );
 
-  const filtered = STICKER_LIST.filter(({ names }) => {
-    const q = query.toLowerCase().trim();
-    return names.some((name) => name.toLowerCase().includes(q));
-  });
+  // При первой загрузке задаём фоновый слой, если нужно
+  useEffect(() => {
+    if (layers.length === 0) {
+      init([
+        {
+          id: "bg",
+          type: "image",
+          props: {
+            src: layers[0]?.props?.src || "",
+            x: 0,
+            y: 0,
+            width: 0,
+            height: 0,
+          },
+          visible: true,
+          lock: true,
+        },
+      ]);
+    }
+  }, [layers, init]);
+
+  const filtered = STICKERS.filter(({ names }) =>
+    names.some((n) => n.toLowerCase().includes(query.toLowerCase())),
+  );
+
+  const onPick = (src) => {
+    const layer = {
+      id: uniqueId(),
+      type: "image",
+      props: { src, x: 100, y: 100, width: 150, height: 150 },
+      visible: true,
+      lock: false,
+    };
+    addLayer(layer);
+  };
 
   return (
     <div className="flex h-full flex-col space-y-3">
-      {/* Поиск остаётся фиксированно сверху */}
       <div className="flex h-9 items-center rounded-xl bg-dark-graphite px-4">
         <input
           type="text"
@@ -301,14 +337,13 @@ export const StickerToolPanel = () => {
           <IconSearch className="size-5 cursor-pointer" />
         </button>
       </div>
-
-      {/* Только эта область скроллится */}
       <div className="flex-1 overflow-y-auto">
         <div className="grid grid-cols-3 gap-2">
           {filtered.map(({ src, names }) => (
             <button
               key={src}
-              className="flex items-center justify-center rounded-xl bg-dark-graphite p-2"
+              onClick={() => onPick(src)}
+              className="flex items-center justify-center rounded-xl bg-dark-graphite p-2 transition hover:bg-dark-supporting"
             >
               <img
                 src={src}
@@ -318,7 +353,7 @@ export const StickerToolPanel = () => {
             </button>
           ))}
           {filtered.length === 0 && (
-            <div className="col-span-2 py-4 text-center text-supporting">
+            <div className="col-span-3 py-4 text-center text-supporting">
               Наклейки не найдены
             </div>
           )}
@@ -326,7 +361,7 @@ export const StickerToolPanel = () => {
       </div>
     </div>
   );
-};
+}
 
 export const EraserToolPanel = () => {
   const [size, setSize] = useState(10);

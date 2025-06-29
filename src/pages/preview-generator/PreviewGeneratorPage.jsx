@@ -8,8 +8,13 @@ import { EditorProvider } from "./EditorContext";
 import { FaPlus } from "react-icons/fa6";
 import { FolderModal } from "./Folders";
 import { usePrevgenData } from "./hooks/usePrevgenData";
-import { deleteGroup, listGenerated, regenerateGroup } from "./api/prevgen";
-import { m } from "framer-motion";
+import {
+  deleteGroup,
+  generateGroup,
+  listGenerated,
+  regenerateGroup,
+} from "./api/prevgen";
+import MaClose from "../../shared/assets/icons/material-symbols-close.svg?react";
 
 const PreviewGeneratorPage = () => {
   const { t } = useTranslation("translation", {
@@ -72,7 +77,7 @@ const PreviewGeneratorPage = () => {
 
     const fmt = selectedFormat;
 
-    // 1) Вставляем «скелетон» — сразу задаём всем трём карточкам поля src, alt, aspect, loading
+    // подготовим скелетон
     const newGroupSkeleton = {
       id: null,
       title:
@@ -83,46 +88,52 @@ const PreviewGeneratorPage = () => {
             : "По фото/объекту",
       params: { prompt: text, reference: selectedReference, format: fmt, mode },
       orientation: fmt,
-      items: Array(3).fill({
-        src: null,
-        alt: "",
-        aspect: fmt,
-        loading: true,
-      }),
+      items: Array(3).fill({ src: null, alt: "", aspect: fmt, loading: true }),
     };
 
-    // Кладём эту группу наверх AI-списка
     setGenerated((prev) => [newGroupSkeleton, ...(prev || [])]);
     setActiveFolder("ai");
 
-    // 2) Делаем реальный запрос
     try {
-      const resp = await fetch("/prevgen-api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prompt: text,
-          reference: selectedReference,
-          format: fmt,
-          mode,
-        }),
-      });
-      if (!resp.ok) throw new Error(await resp.text());
-
-      // 3) Сразу перечитываем все AI-группы с бэка, чтобы получить свежие данные
-      const updated = await fetch("/prevgen-api/generated").then((r) => {
-        if (!r.ok) throw new Error(r.statusText);
-        return r.json();
+      // вместо прямого fetch используем утилиту
+      const { group_id, images } = await generateGroup({
+        prompt: text,
+        reference: selectedReference,
+        format: fmt,
+        mode,
+        count: 3,
       });
 
-      setGenerated(updated);
-      setActiveFolder("ai");
+      // сразу вставляем полученные картинки вместо скелетона
+      setGenerated((prev) => {
+        const rest = prev.slice(1); // отрезаем скелетон
+        return [
+          {
+            id: group_id,
+            title: text,
+            params: {
+              prompt: text,
+              reference: selectedReference,
+              format: fmt,
+              mode,
+            },
+            orientation: fmt,
+            items: images.map((img) => ({
+              src: img.src,
+              alt: img.alt,
+              aspect: img.aspect,
+              layers: img.layers,
+            })),
+          },
+          ...rest,
+        ];
+      });
     } catch (err) {
-      console.error("Generation error:", err);
-      // Здесь можно заменить «скелетон» на группу с ошибкой
+      console.error("Generation failed:", err);
+      // показываем ошибку на первом элементе
       setGenerated((prev) =>
-        prev.map((g, i) =>
-          i === 0
+        prev.map((g, idx) =>
+          idx === 0
             ? {
                 ...g,
                 items: Array(3).fill({
@@ -175,7 +186,7 @@ const PreviewGeneratorPage = () => {
 
   return (
     <EditorProvider>
-      <div className="box-border flex h-[calc(100vh-80px)] flex-col overflow-hidden pt-12 font-circe-regular text-main-white">
+      <div className="box-border flex h-[calc(100vh-80px)] max-w-full flex-col overflow-hidden pt-12 font-circe-regular text-main-white">
         <div className="flex h-full items-start gap-x-3">
           {modalMode && (
             <FolderModal
@@ -189,15 +200,23 @@ const PreviewGeneratorPage = () => {
           )}
           <div
             ref={refLeftPanel}
-            className={`group/leftPanel flex h-full flex-grow flex-col ${editorOpen ? "" : "overflow-y-auto"}`}
+            className={`group/leftPanel relative flex h-full flex-col overflow-y-visible ${editorOpen ? "overflow-x-hidden" : "flex-grow"}`}
           >
             {editorOpen ? (
-              <EditorCanvas
-                image={editorImage}
-                layers={layers}
-                aspect={activeCrop}
-                onClose={() => setEditorOpen(false)}
-              />
+              <>
+                <button
+                  className="absolute left-0 z-30 -translate-y-[calc(100%+12px)] text-2xl"
+                  onClick={() => setEditorOpen(false)}
+                >
+                  <MaClose />
+                </button>
+                <EditorCanvas
+                  src={editorImage}
+                  layers={layers}
+                  aspect={activeCrop}
+                  onClose={() => setEditorOpen(false)}
+                />
+              </>
             ) : (
               <LeftPanel
                 folders={folders}
@@ -238,7 +257,7 @@ const PreviewGeneratorPage = () => {
           {activeFolder !== "templates" && !editorOpen && (
             <div
               ref={refPromptPanel}
-              className="sticky top-0 flex h-full w-full max-w-[500px] flex-col rounded-[20px] bg-dark-coal p-3"
+              className="sticky top-0 flex h-full w-full max-w-[500px] flex-shrink-0 flex-grow flex-col rounded-[20px] bg-dark-coal p-3"
             >
               <SidebarPrompt
                 prompt={prompt}

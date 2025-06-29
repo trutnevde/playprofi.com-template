@@ -5,13 +5,15 @@ from sqlalchemy import Column, JSON, delete
 from sqlalchemy.orm import selectinload
 from pydantic import BaseModel, conint, HttpUrl
 from pydantic_settings import BaseSettings
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 import httpx
 import os
 from dotenv import load_dotenv, find_dotenv
 import asyncio
 import logging
 import config
+import io
+import ast
 
 logger = logging.getLogger('uvicorn.error')
 logger.setLevel(logging.DEBUG)
@@ -30,8 +32,6 @@ settings = Settings()
 # --- Flux config ---
 FLUX_API_KEY = settings.flux_api_key
 FLUX_ENDPOINT = settings.flux_endpoint
-
-print(settings)
 
 async def call_single_flux(
     prompt: str, reference: Optional[str], fmt: str, mode: str, poll_interval: float = 0.5
@@ -85,18 +85,46 @@ async def call_flux(
 ) -> List[str]:
     images: List[str] = []
     for _ in range(count):
-        url = await call_single_flux(prompt, reference, fmt, mode)
-        images.append(url)
+        src = await call_single_flux(prompt, reference, fmt, mode)
+        images.append(src)
     return images
 
+async def upload_single_image(client: httpx.AsyncClient, url: str) -> str:
+    try:
+        # Скачиваем изображение
+        response = await client.get(url)
+        response.raise_for_status()
+        file_bytes = response.content
 
-async def upload_to_cdn(urls: list[str]) -> list[str]:
+        # Подготавливаем и отправляем файл
+        files = {'file': ('image.png', io.BytesIO(file_bytes), 'image/png')}
+        upload_response = await client.post(config.cdn_endpoint, files=files)
+        upload_response.raise_for_status()
+
+        # Парсим ответ
+        data = upload_response.json()
+        print("Ответ от CDN:", data)  # ← временно логируем ответ
+
+        # Попробуем достать ссылку
+        variants = (
+            data.get("result", {})
+            .get("variants", [])
+        )
+        if not variants:
+            raise ValueError("CDN не вернул variants")
+
+        return variants[0]
+
+    except Exception as e:
+        print(f"Ошибка при загрузке {url}: {e}")
+        return ""
+
+
+async def upload_to_cdn(urls: List[str]) -> List[str]:
     async with httpx.AsyncClient(timeout=60) as client:
-        # допустим, сервис принимает JSON { "files": [ "<flux-url1>", ... ] }
-        r = await client.post(config.cdn_endpoint, json={"files": urls})
-        r.raise_for_status()
-        data = r.json()
-        return data.get("uploaded", [])
+        tasks = [upload_single_image(client, url) for url in urls]
+        results = await asyncio.gather(*tasks)
+        return [r for r in results if r]  # отфильтровываем пустые строки
 
 
 # ── SQLModel ORM models ────────────────────────────────────────────────
@@ -119,19 +147,23 @@ class ImageLayer(SQLModel):
 
 class GeneratedImage(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    cover_id: int = Field(foreign_key="generatedcover.id")
-    url: str
-    layers: List[dict] = Field(sa_column=Column(JSON), default_factory=list)
-    cover: Optional["GeneratedCover"] = Relationship(back_populates="images")
+    cover_id: int = Field(foreign_key="generatedgroup.id")
+    src: str
+    layers: Optional[List[Any]] = Field(
+        sa_column=Column(JSON, nullable=False), default_factory=list
+    )
+    cover: Optional["GeneratedGroup"] = Relationship(back_populates="images")
 
-
-class GeneratedCover(SQLModel, table=True):
+class GeneratedGroup(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     prompt: str
     reference: Optional[str]
     format: str
     mode: str
-    images: List[GeneratedImage] = Relationship(back_populates="cover", sa_relationship_kwargs={"cascade":"all, delete-orphan"})
+    images: List[GeneratedImage] = Relationship(
+        back_populates="cover",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+    )
 
 class TemplateGroup(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -164,6 +196,9 @@ class MyTemplate(SQLModel, table=True):
     src: str
     alt: Optional[str]
     aspect: str
+    layers: Optional[List[Any]] = Field(
+        sa_column=Column(JSON, nullable=False), default_factory=list
+    )
 
 # ── Pydantic request/response schemas ────────────────────────────────────
 
@@ -172,22 +207,32 @@ class GenerateRequest(BaseModel):
     reference: Optional[str] = None
     format: str
     mode: str
-    count: conint(ge=1, le=10) = 3
+    count: int = 3
+
+    @classmethod
+    def __get_validators__(cls):
+        yield from super().__get_validators__()
+        def check_count(v):
+            if not (1 <= v <= 10):
+                raise ValueError("count must be between 1 and 10")
+            return v
+        yield check_count
+
+class ImageOut(BaseModel):
+    id: int
+    src: str
+    alt: Optional[str] = ""
+    aspect: str
+    layers: List[dict] = []
 
 class GenerateResponse(BaseModel):
     group_id: int
-    images: List[str]
+    images: List[ImageOut]
 
 class Item(BaseModel):
     src: str
     alt: Optional[str]
     aspect: str
-    layers: List[dict] = []
-
-class ImageOut(BaseModel):
-    id: int
-    url: str
-    layers: List[dict]
 
 class GroupOut(BaseModel):
     id: int
@@ -199,17 +244,18 @@ class GeneratedGroupOut(BaseModel):
     title: str
     params: GenerateRequest
     orientation: str
-    items: List[Item]
+    items: List[ImageOut]
 
 # ── Database setup & seed ────────────────────────────────────────────────
 
 engine = create_engine("sqlite:///./app.db")
 SQLModel.metadata.create_all(engine)
 
+print("Using database:", engine.url)
+
 def seed_data():
     with Session(engine) as session:
         exists = session.exec(select(TemplateGroup)).first()
-        print("TemplateGroup exists?", bool(exists))
 
         # Templates
         if not session.exec(select(TemplateGroup)).first():
@@ -234,12 +280,12 @@ def seed_data():
                 session.add(ExampleItem(src="https://placehold.co/300x150", alt="Превью", aspect="16:9", group_id=grp.id))
         # My Templates
         if not session.exec(select(MyTemplate)).first():
-            for url in [
+            for src in [
                 "https://placehold.co/130x75?text=Ref+1",
                 "https://placehold.co/130x75?text=Ref+2",
                 "https://placehold.co/130x75?text=Ref+3",
             ]:
-                session.add(MyTemplate(src=url, alt="ref", aspect="16:9"))
+                session.add(MyTemplate(src=src, alt="ref", aspect="16:9"))
         session.commit()
 
 seed_data()
@@ -264,13 +310,13 @@ async def generate(req: GenerateRequest):
     try:
         cdn_urls = await upload_to_cdn(flux_urls)
     except httpx.HTTPError as e:
-        # если заливка в CDN упала — можно всё равно вернуть оригиналы
+        # если загрузка в CDN упала — можно всё равно вернуть оригиналы
         cdn_urls = flux_urls
         logger.warning(f"Upload to CDN failed, using flux urls: {e}")
         # raise HTTPException(502, f"Upload to CDN failed: {e}")
 
     with Session(engine) as session:
-        cover = GeneratedCover(
+        cover = GeneratedGroup(
             prompt=req.prompt,
             reference=req.reference,
             format=req.format,
@@ -279,15 +325,15 @@ async def generate(req: GenerateRequest):
         session.add(cover); session.commit(); session.refresh(cover)
 
         # создаём связанные записи
-        for url in cdn_urls:
+        for src in cdn_urls:
             img = GeneratedImage(
                 cover_id=cover.id,
-                url=url,
+                src=src,
                 layers=[
                     {
-                        "id": "bg",               # уникальный идентификатор фонового слоя
+                        "id": "bg",
                         "type": "image",
-                        "image": url,             # путь к фону
+                        "image": src,
                         "x": 0,
                         "y": 0,
                         "visible": True,
@@ -306,14 +352,14 @@ async def generate(req: GenerateRequest):
     return {
         "group_id": cover.id,
         "images": [
-            ImageOut(id=i.id, url=i.url, layers=i.layers) for i in images
+            ImageOut(id=i.id, src=i.src, layers=i.layers, aspect=cover.format) for i in images
         ],
     }
 
 @app.post("/api/regenerate/{group_id}", response_model=GenerateResponse)
 async def regenerate(group_id: int):
     with Session(engine) as session:
-        cover = session.get(GeneratedCover, group_id) or HTTPException(404, "Not found")
+        cover = session.get(GeneratedGroup, group_id) or HTTPException(404, "Not found")
     flux_urls = await call_flux(cover.prompt, cover.reference, cover.format, cover.mode, cover.count)
 
     try:
@@ -330,8 +376,18 @@ async def regenerate(group_id: int):
             delete(GeneratedImage).where(GeneratedImage.cover_id == group_id)
         )
         # вставляем новые, сохраняя пустые слои
-        for url in cdn_urls:
-            session.add(GeneratedImage(cover_id=group_id, url=url, layers=[]))
+        for src in cdn_urls:
+            session.add(GeneratedImage(cover_id=group_id, src=src, aspect=cover.format, layers=[
+                    {
+                        "id": "bg",
+                        "type": "image",
+                        "image": src,
+                        "x": 0,
+                        "y": 0,
+                        "visible": True,
+                        "lock": True,
+                    }
+                ],))
         session.commit()
 
         images = session.exec(
@@ -340,20 +396,21 @@ async def regenerate(group_id: int):
 
     return {
         "group_id": group_id,
-        "images": [ImageOut(id=i.id, url=i.url, layers=i.layers) for i in images],
+        "images": [ImageOut(id=i.id, src=i.src, layers=i.layers) for i in images],
     }
 
 @app.get("/api/generated", response_model=List[GeneratedGroupOut])
 def list_generated():
     with Session(engine) as session:
-        stmt = select(GeneratedCover).options(selectinload(GeneratedCover.images))
+        stmt = select(GeneratedGroup).options(selectinload(GeneratedGroup.images))
         covers = session.exec(stmt).all()
 
     result = []
     for cover in covers:
         items = [
-            Item(
-                src=img.url,
+            ImageOut(
+                id=img.id,
+                src=img.src,
                 alt="",
                 aspect=cover.format,
                 layers=img.layers
@@ -379,7 +436,7 @@ def list_generated():
 @app.delete("/api/generated/{group_id}", status_code=204)
 def delete_generated(group_id: int):
     with Session(engine) as session:
-        gen = session.get(GeneratedCover, group_id)
+        gen = session.get(GeneratedGroup, group_id)
         if not gen:
             raise HTTPException(404, "Group not found")
         session.delete(gen)

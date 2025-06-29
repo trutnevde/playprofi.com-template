@@ -1,11 +1,11 @@
 # migrate_old_images.py
 from sqlmodel import Session, select, text
-from main import GeneratedCover, GeneratedImage, engine
+from main import GeneratedGroup, GeneratedImage, engine
 from sqlalchemy import text
 
 def migrate():
     with Session(engine) as session:
-        covers = session.exec(select(GeneratedCover)).all()
+        covers = session.exec(select(GeneratedGroup)).all()
         for cover in covers:
             # читаем «сырые» URL из старой колонки JSON
             raw_urls = session.execute(

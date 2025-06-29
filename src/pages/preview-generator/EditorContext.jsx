@@ -106,11 +106,24 @@ export const EditorProvider = ({ children }) => {
 
   const addLayer = () => {
     const nextId = layers.length ? Math.max(...layers.map((l) => l.id)) + 1 : 1;
-    setLayers([...layers, { id: nextId, name: `Слой ${nextId}` }]);
+    setLayers([
+      ...layers,
+      { id: nextId, name: `Слой ${nextId}`, visible: true, locked: false },
+    ]);
   };
 
-  const removeLayer = (id) => {
-    setLayers(layers.filter((l) => l.id !== id));
+  const removeLayer = (id) => setLayers(layers.filter((l) => l.id !== id));
+
+  const toggleLayerVisibility = (id) => {
+    setLayers((layers) =>
+      layers.map((l) => (l.id === id ? { ...l, visible: !l.visible } : l)),
+    );
+  };
+
+  const toggleLayerLock = (id) => {
+    setLayers((layers) =>
+      layers.map((l) => (l.id === id ? { ...l, locked: !l.locked } : l)),
+    );
   };
 
   return (
@@ -121,9 +134,12 @@ export const EditorProvider = ({ children }) => {
         onToolChange,
         onCropChange,
         activeLayer,
+        setActiveLayer,
         layers,
         addLayer,
         removeLayer,
+        toggleLayerVisibility,
+        toggleLayerLock,
       }}
     >
       {children}

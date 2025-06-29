@@ -188,6 +188,8 @@ export const EditorSidebar = ({ image, references }) => {
     removeLayer,
     onUndo,
     onRedo,
+    toggleLayerVisibility,
+    toggleLayerLock,
   } = useEditor();
 
   const [previewSrc, setPreviewSrc] = useState(null);
@@ -331,14 +333,20 @@ export const EditorSidebar = ({ image, references }) => {
                       >
                         <IconTrash className="size-full" />
                       </button>
-                      <button className="size-4">
+                      <button
+                        onClick={() => toggleLayerVisibility(layer.id)}
+                        className="size-4"
+                      >
                         {layer.show ? (
                           <IconEye className="size-full" />
                         ) : (
                           <IconEyeClosed className="size-full" />
                         )}
                       </button>
-                      <button className="size-4">
+                      <button
+                        onClick={() => toggleLayerLock(layer.id)}
+                        className="size-4"
+                      >
                         {layer.lock ? (
                           <IconLock className="size-full" />
                         ) : (
