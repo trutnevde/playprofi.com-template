@@ -56,6 +56,27 @@ export const TOOL_KEYS = [
   },
 ];
 
+export const ASPECT_OPTIONS = {
+  "16:9": {
+    label: "16:9",
+    fullLabel: "YouTube. Обложка видео\n1280×720 (16:9)",
+    className: "aspect-[16/9]",
+    preview: <svg width="65" height="36" /* ... */ />,
+  },
+  "9:16": {
+    label: "9:16",
+    fullLabel: "YouTube Shorts. Обложка видео\n720×1280 (9:16)",
+    className: "aspect-[9/16]",
+    preview: <svg width="25" height="42" /* ... */ />,
+  },
+  square: {
+    label: "Квадрат",
+    fullLabel: "Квадратный формат\n720×720 (1:1)",
+    className: "aspect-1",
+    preview: <svg width="36" height="36" /* ... */ />,
+  },
+};
+
 const EditorContext = createContext(null);
 
 export const EditorProvider = ({ children }) => {

@@ -9,15 +9,18 @@ import {
   ImageOverlayToolPanel,
   BackgroundToolPanel,
 } from "./EditorPanels";
-import { FaPlus, FaRedo, FaTrash, FaUndo } from "react-icons/fa";
-import { TOOL_KEYS, useEditor } from "../EditorContext";
-import { orientationOptions } from "../PreviewGeneratorPage";
+import { TOOL_KEYS, ASPECT_OPTIONS, useEditor } from "../EditorContext";
 import { FaChevronDown, FaChevronUp } from "react-icons/fa6";
 import IconUndo from "../../../shared/assets/icons/undo.svg?react";
 import IconRedo from "../../../shared/assets/icons/redo.svg?react";
 import IconLayers from "../../../shared/assets/icons/layers.svg?react";
 import IconShevronUp from "../../../shared/assets/icons/arrow-up-fill.svg?react";
 import IconShevronDown from "../../../shared/assets/icons/arrow-down-fill.svg?react";
+import IconEye from "../../../shared/assets/icons/eye.svg?react";
+import IconEyeClosed from "../../../shared/assets/icons/eye-closed.svg?react";
+import IconLock from "../../../shared/assets/icons/lock.svg?react";
+import IconUnlock from "../../../shared/assets/icons/unlock.svg?react";
+import IconTrash from "../../../shared/assets/icons/trash.svg?react";
 
 export function ColorPicker({ value, onChange, className }) {
   const inputRef = useRef(null);
@@ -237,25 +240,23 @@ export const EditorSidebar = ({ image, references }) => {
                 className="flex items-center gap-1"
                 onClick={() => setIsFormatMenuOpen((v) => !v)}
               >
-                Кадрирование ({orientationOptions[activeCrop].label})
+                Кадрирование ({ASPECT_OPTIONS[activeCrop].label})
                 <FaChevronDown />
               </button>
               {isFormatMenuOpen && (
                 <div className="absolute left-0 top-full z-10 mt-2 flex w-max flex-col overflow-hidden rounded-2xl bg-dark-graphite shadow-lg-hover-card">
-                  {Object.entries(orientationOptions).map(
-                    ([key, { label }]) => (
-                      <button
-                        key={key}
-                        className="px-4 py-2 text-left text-sm text-white hover:bg-dark-supporting hover:text-main-accent"
-                        onClick={() => {
-                          onCropChange(key);
-                          setIsFormatMenuOpen(false);
-                        }}
-                      >
-                        Кадрирование ({label})
-                      </button>
-                    ),
-                  )}
+                  {Object.entries(ASPECT_OPTIONS).map(([key, { label }]) => (
+                    <button
+                      key={key}
+                      className="px-4 py-2 text-left text-sm text-white hover:bg-dark-supporting hover:text-main-accent"
+                      onClick={() => {
+                        onCropChange(key);
+                        setIsFormatMenuOpen(false);
+                      }}
+                    >
+                      Кадрирование ({label})
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
@@ -316,12 +317,44 @@ export const EditorSidebar = ({ image, references }) => {
               {layers.map((layer) => (
                 <div
                   key={layer.id}
-                  className="flex items-center justify-between rounded bg-dark-graphite p-2"
+                  className={`flex items-center justify-between rounded-xl bg-dark-graphite p-2 ${activeLayer === layer.id ? "bg-dark-supporting" : ""}`}
                 >
-                  <span>{layer.name}</span>
-                  <button onClick={() => removeLayer(layer.id)}>
-                    <FaTrash />
-                  </button>
+                  <div className="aspect-[1.666] h-full overflow-hidden rounded-lg bg-supporting">
+                    <img src={layer.image} className="h-full w-full" alt="" />
+                  </div>
+                  <div className="flex flex-grow justify-between gap-2">
+                    <span>{layer.name}</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => removeLayer(layer.id)}
+                        className="size-4"
+                      >
+                        <IconTrash className="size-full" />
+                      </button>
+                      <button className="size-4">
+                        {layer.show ? (
+                          <IconEye className="size-full" />
+                        ) : (
+                          <IconEyeClosed className="size-full" />
+                        )}
+                      </button>
+                      <button className="size-4">
+                        {layer.lock ? (
+                          <IconLock className="size-full" />
+                        ) : (
+                          <IconUnlock className="size-full" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex flex-col">
+                    <button>
+                      <IconShevronUp />
+                    </button>
+                    <button>
+                      <IconShevronDown />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

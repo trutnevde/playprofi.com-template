@@ -1,5 +1,5 @@
 import { FaDownload, FaEdit, FaHeart } from "react-icons/fa";
-import { orientationOptions } from "../PreviewGeneratorPage";
+import { ASPECT_OPTIONS } from "../EditorContext";
 import IconEdit from "../../../shared/assets/icons/edit.svg?react";
 import IconHeart from "../../../shared/assets/icons/heart-outline.svg?react";
 import IconDownload from "../../../shared/assets/icons/download-2.svg?react";
@@ -12,11 +12,11 @@ export const CoverCard = ({
   onEdit,
   onLike,
   onDownload,
+  error,
 }) => {
   // базовый tailwind-класс для aspect
   const baseClass =
-    orientationOptions[aspect]?.className ||
-    orientationOptions["16:9"].className;
+    ASPECT_OPTIONS[aspect]?.className || ASPECT_OPTIONS["16:9"].className;
 
   // для вертикальных: ограничиваем max-width так, чтобы
   // высота равнялась ширине горизонталки (примерно 220px)
@@ -40,9 +40,17 @@ export const CoverCard = ({
     <div
       className={`group/coverCard relative cursor-pointer rounded-md ${baseClass}${extra}`}
     >
-      <div className="h-full w-full overflow-hidden rounded-[20px]">
+      <div className="h-full w-full animate-pan-gradient overflow-hidden rounded-[20px] bg-gradient-to-br from-[rgba(25,24,24,1)] to-[rgba(42,41,41,1)]">
         {loading ? (
           <div className="h-full w-full animate-pan-gradient bg-gradient-to-br from-[rgba(25,24,24,1)] to-[rgba(42,41,41,1)]" />
+        ) : error ? (
+          <div className="flex h-full w-full animate-pan-gradient items-center justify-center bg-gradient-to-br from-[rgba(25,24,24,1)] to-[rgba(42,41,41,1)]">
+            <p className="text-center text-white">Ошибка при генерации</p>
+          </div>
+        ) : !src ? (
+          <div className="h-full w-full animate-pan-gradient bg-gradient-to-br from-[rgba(25,24,24,1)] to-[rgba(42,41,41,1)]">
+            <p className="text-center text-white">Ошибка изображения</p>
+          </div>
         ) : (
           <img src={src} alt="Обложка" className="h-full w-full object-cover" />
         )}

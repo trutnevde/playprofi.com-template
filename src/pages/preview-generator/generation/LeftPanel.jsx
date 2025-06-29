@@ -5,7 +5,7 @@ import lampCharge from "../../../shared/assets/icons/lamp-charge.svg";
 import mouseSquare from "../../../shared/assets/icons/mouse-square.svg";
 import penAdd from "../../../shared/assets/icons/pen-add.svg";
 import { useState } from "react";
-import { orientationOptions } from "../PreviewGeneratorPage";
+import { ASPECT_OPTIONS } from "../EditorContext";
 import StyledSelect from "../../../shared/ui/select/SelectCustom";
 import SearchNormal from "../../../shared/assets/icons/search-normal.svg?react";
 import IconEdit from "../../../shared/assets/icons/edit-solid.svg?react";
@@ -36,6 +36,7 @@ const LeftPanel = ({
   onAddFolder,
   groups = [],
   onDeleteGroup,
+  onRegenGroup,
   onEditCard,
   onEditFolder,
   onDeleteFolder,
@@ -46,7 +47,7 @@ const LeftPanel = ({
 
   const orientationSelectOptions = [
     { value: "all", text: "Все форматы" },
-    ...Object.entries(orientationOptions).map(([key, { label }]) => ({
+    ...Object.entries(ASPECT_OPTIONS).map(([key, { label }]) => ({
       value: key,
       text: `Формат (${label})`,
     })),
@@ -119,8 +120,8 @@ const LeftPanel = ({
               title={group.title}
               items={group.items}
               onDrag={group.onDrag}
-              onRegen={group.onRegen}
-              onDeleteGroup={() => onDeleteGroup(gi)}
+              onRegenGroup={() => onRegenGroup(group.id)}
+              onDeleteGroup={() => onDeleteGroup(group.id)}
               onEditCard={onEditCard}
               hideButtons={true}
               hideTitles={true}
@@ -163,8 +164,8 @@ const LeftPanel = ({
               title={group.title}
               items={group.items}
               onDrag={group.onDrag}
-              onRegen={group.onRegen}
-              onDeleteGroup={() => onDeleteGroup(gi)}
+              onRegenGroup={() => onRegenGroup(group.id)}
+              onDeleteGroup={() => onDeleteGroup(group.id)}
               onEditCard={onEditCard}
               hideButtons={true}
               showAllItems={true} // показываем ВСЕ подходящие карточки
@@ -187,8 +188,8 @@ const LeftPanel = ({
               title={group.title}
               items={group.items}
               onDrag={group.onDrag}
-              onRegen={group.onRegen}
-              onDeleteGroup={() => onDeleteGroup(gi)}
+              onRegenGroup={() => onRegenGroup(group.id)}
+              onDeleteGroup={() => onDeleteGroup(group.id)}
               onEditCard={onEditCard}
             />
           ))}

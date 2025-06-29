@@ -7,28 +7,9 @@ import { SidebarPrompt } from "./generation/SidebarPrompt";
 import { EditorProvider } from "./EditorContext";
 import { FaPlus } from "react-icons/fa6";
 import { FolderModal } from "./Folders";
-
-// Опции форматов
-export const orientationOptions = {
-  "16:9": {
-    label: "16:9",
-    fullLabel: "YouTube. Обложка видео\n1280×720 (16:9)",
-    className: "aspect-[16/9]",
-    preview: <svg width="65" height="36" /* ... */ />,
-  },
-  "9:16": {
-    label: "9:16",
-    fullLabel: "YouTube Shorts. Обложка видео\n720×1280 (9:16)",
-    className: "aspect-[9/16]",
-    preview: <svg width="25" height="42" /* ... */ />,
-  },
-  square: {
-    label: "Квадрат",
-    fullLabel: "Квадратный формат\n720×720 (1:1)",
-    className: "aspect-1",
-    preview: <svg width="36" height="36" /* ... */ />,
-  },
-};
+import { usePrevgenData } from "./hooks/usePrevgenData";
+import { deleteGroup, listGenerated, regenerateGroup } from "./api/prevgen";
+import { m } from "framer-motion";
 
 const PreviewGeneratorPage = () => {
   const { t } = useTranslation("translation", {
@@ -36,10 +17,8 @@ const PreviewGeneratorPage = () => {
   });
 
   // === State для всех четырёх источников данных ===
-  const [generatedGroups, setGeneratedGroups] = useState([]);
-  const [templateGroups, setTemplateGroups] = useState([]);
-  const [exampleGroups, setExampleGroups] = useState([]);
-  const [myTemplateGroups, setMyTemplateGroups] = useState([]);
+  const { generated, templates, examples, myTemplates, setGenerated } =
+    usePrevgenData();
 
   // === State для папок (tabs) ===
   const [folders, setFolders] = useState([
@@ -50,8 +29,6 @@ const PreviewGeneratorPage = () => {
   ]);
 
   const [activeFolder, setActiveFolder] = useState("default");
-
-  // === Остальные стейты ===
   const [modalMode, setModalMode] = useState(null);
   const [modalData, setModalData] = useState({});
   const [prompt, setPrompt] = useState("");
@@ -60,65 +37,33 @@ const PreviewGeneratorPage = () => {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorImage, setEditorImage] = useState(null);
   const [activeTool, setActiveTool] = useState(null);
-
-  const refPromptPanel = useRef();
-  const refLeftPanel = useRef();
-
-  // === Загрузка данных при старте ===
-  useEffect(() => {
-    const safeFetch = async (url, setter) => {
-      try {
-        const resp = await fetch(url, {
-          headers: { Accept: "application/json" },
-        });
-        if (!resp.ok) {
-          console.warn(`Fetch ${url} failed:`, resp.status);
-          setter([]);
-          return;
-        }
-        // проверим content-type
-        const ct = resp.headers.get("content-type") || "";
-        if (!ct.includes("application/json")) {
-          console.warn(`Fetch ${url} did not return JSON, got ${ct}`);
-          setter([]);
-          return;
-        }
-        const data = await resp.json();
-        setter(data);
-      } catch (err) {
-        console.error(`Fetch ${url} error:`, err);
-        setter([]);
-      }
-    };
-
-    safeFetch("/prevgen-api/generated", setGeneratedGroups);
-    safeFetch("/prevgen-api/templates", setTemplateGroups);
-    safeFetch("/prevgen-api/examples", setExampleGroups);
-    safeFetch("/prevgen-api/favorites", (favs) => {
-      const groups = [
-        {
-          title: "Избранные",
-          items: favs.map((src) => ({ src, alt: "", aspect: "16:9" })),
-        },
-      ];
-      setMyTemplateGroups(groups);
-    });
-  }, []);
+  const [activeCrop, setActiveCrop] = useState("16:9");
+  const [layers, setLayers] = useState([]);
 
   const getGroups = () => {
     switch (activeFolder) {
       case "default":
-        return exampleGroups;
+        return examples;
       case "templates":
-        return templateGroups;
+        return templates;
       case "myTemplates":
-        return myTemplateGroups;
+        return myTemplates;
       case "ai":
-        return generatedGroups;
+        return generated;
       default:
         return [];
     }
   };
+
+  const refreshGenerated = () =>
+    listGenerated()
+      .then(setGenerated)
+      .catch(() => {
+        /* noop */
+      });
+
+  const refPromptPanel = useRef();
+  const refLeftPanel = useRef();
 
   // === Генерация нового набора ===
   const handleCreate = async (mode = "ai") => {
@@ -147,7 +92,7 @@ const PreviewGeneratorPage = () => {
     };
 
     // Кладём эту группу наверх AI-списка
-    setGeneratedGroups((prev) => [newGroupSkeleton, ...(prev || [])]);
+    setGenerated((prev) => [newGroupSkeleton, ...(prev || [])]);
     setActiveFolder("ai");
 
     // 2) Делаем реальный запрос
@@ -170,14 +115,12 @@ const PreviewGeneratorPage = () => {
         return r.json();
       });
 
-      console.log(updated);
-
-      setGeneratedGroups(updated);
+      setGenerated(updated);
       setActiveFolder("ai");
     } catch (err) {
       console.error("Generation error:", err);
       // Здесь можно заменить «скелетон» на группу с ошибкой
-      setGeneratedGroups((prev) =>
+      setGenerated((prev) =>
         prev.map((g, i) =>
           i === 0
             ? {
@@ -196,14 +139,17 @@ const PreviewGeneratorPage = () => {
     }
   };
 
-  // === Регенерация ===
   const handleRegenerate = async (groupId) => {
-    await fetch(`/prevgen-api/regenerate/${groupId}`, { method: "POST" });
-    const updated = await fetch("/prevgen-api/generated").then((r) => r.json());
-    setGeneratedGroups(updated);
+    await regenerateGroup(groupId);
+    await refreshGenerated();
   };
 
-  // === 7. Удаление/переименование/создание папки ===
+  const handleDelete = async (groupId) => {
+    await deleteGroup(groupId);
+    await refreshGenerated();
+  };
+
+  // === Удаление/переименование/создание папки ===
   const openModal = (mode, data = {}) => {
     setModalMode(mode);
     setModalData(data);
@@ -227,7 +173,6 @@ const PreviewGeneratorPage = () => {
     closeModal();
   };
 
-  // === 8. Рендер ===
   return (
     <EditorProvider>
       <div className="box-border flex h-[calc(100vh-80px)] flex-col overflow-hidden pt-12 font-circe-regular text-main-white">
@@ -249,6 +194,8 @@ const PreviewGeneratorPage = () => {
             {editorOpen ? (
               <EditorCanvas
                 image={editorImage}
+                layers={layers}
+                aspect={activeCrop}
                 onClose={() => setEditorOpen(false)}
               />
             ) : (
@@ -257,11 +204,12 @@ const PreviewGeneratorPage = () => {
                 activeFolder={activeFolder}
                 onFolderChange={setActiveFolder}
                 groups={getGroups()}
-                onDeleteGroup={() => {
-                  /*...*/
-                }}
-                onEditCard={(src) => {
-                  setEditorImage(src);
+                onDeleteGroup={handleDelete}
+                onRegenGroup={handleRegenerate}
+                onEditCard={(item, groupId) => {
+                  setEditorImage(item);
+                  setLayers(item.layers || []);
+                  setActiveCrop(item.aspect);
                   setEditorOpen(true);
                 }}
                 onAddFolder={() => openModal("create")}
@@ -282,7 +230,8 @@ const PreviewGeneratorPage = () => {
                 activeTool={activeTool}
                 onToolChange={setActiveTool}
                 onClose={() => setEditorOpen(false)}
-                references={myTemplateGroups}
+                references={myTemplates}
+                layers={layers}
               />
             </div>
           )}
@@ -299,7 +248,7 @@ const PreviewGeneratorPage = () => {
                 selectedFormat={selectedFormat}
                 onFormatChange={setSelectedFormat}
                 onCreate={handleCreate}
-                references={myTemplateGroups}
+                references={myTemplates}
               />
             </div>
           )}

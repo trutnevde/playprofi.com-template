@@ -8,7 +8,7 @@ import Trash from "../../../shared/assets/icons/trash.svg?react";
 export const CoverGroup = ({
   title,
   items = [],
-  onRegen,
+  onRegenGroup,
   onDeleteGroup,
   onDrag,
   onEditCard,
@@ -39,7 +39,7 @@ export const CoverGroup = ({
               <MoveUp />
             </button>
             <button
-              onClick={onRegen}
+              onClick={onRegenGroup}
               className="rounded p-1 hover:bg-dark-graphite"
             >
               <Repeat />
@@ -68,6 +68,7 @@ export const CoverGroup = ({
             aspect={item.aspect}
             onEdit={() => onEditCard(item.src)}
             loading={item.loading}
+            error={item.error}
           />
         ))}
       </div>

@@ -1,15 +1,17 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import SQLModel, Field, Relationship, Session, create_engine, select
-from sqlalchemy import Column, JSON
-from pydantic import BaseModel
+from sqlalchemy import Column, JSON, delete
+from sqlalchemy.orm import selectinload
+from pydantic import BaseModel, conint, HttpUrl
 from pydantic_settings import BaseSettings
-from typing import List, Optional
+from typing import List, Optional, Dict
 import httpx
 import os
 from dotenv import load_dotenv, find_dotenv
 import asyncio
 import logging
+import config
 
 logger = logging.getLogger('uvicorn.error')
 logger.setLevel(logging.DEBUG)
@@ -31,29 +33,12 @@ FLUX_ENDPOINT = settings.flux_endpoint
 
 print(settings)
 
-async def call_flux(
-    prompt: str,
-    reference: Optional[str],
-    fmt: str,
-    mode: str,
-    poll_interval: float = 0.5,
-) -> List[str]:
-    """
-    Асинхронно генерирует обложки через Flux API:
-      1. POST /flux-kontext-pro → {"id", "polling_url"}
-      2. GET polling_url?id=… пока status != Ready
-      3. Возвращает список URL изображений
-    """
-
-    FLUX_API_KEY = 'bc4fe6fa-c015-4bd6-be80-b1d059b95aa4'
-    FLUX_ENDPOINT = "https://api.bfl.ai/v1/flux-kontext-pro"
-
-    if not FLUX_API_KEY:
-        raise RuntimeError(f"FLUX_API_KEY is not set. {settings}")
-
+async def call_single_flux(
+    prompt: str, reference: Optional[str], fmt: str, mode: str, poll_interval: float = 0.5
+) -> str:
     headers = {
         "accept": "application/json",
-        "x-key": FLUX_API_KEY,
+        "x-key": config.flux_api_key,
         "Content-Type": "application/json",
     }
     payload = {
@@ -63,21 +48,14 @@ async def call_flux(
         **({"reference": reference} if reference else {}),
     }
 
-    logger.debug(f"Using headers={headers!r}")
-    logger.debug(f"Using payload={payload!r}")
-
     async with httpx.AsyncClient(timeout=60) as client:
-        # 1) отправляем запрос на генерацию
-        resp = await client.post(FLUX_ENDPOINT, json=payload, headers=headers)
-        if resp.status_code == 403:
-            body = await resp.aread()
-            raise HTTPException(502, detail=f"Flux API returned 403: {body.decode()}")
+        resp = await client.post(config.flux_endpoint, json=payload, headers=headers)
         resp.raise_for_status()
         data = resp.json()
         polling_url = data["polling_url"]
         request_id = data["id"]
 
-        # 2) ждём, опрашивая polling_url
+        # polling
         while True:
             await asyncio.sleep(poll_interval)
             poll = await client.get(
@@ -89,16 +67,37 @@ async def call_flux(
             pd = poll.json()
             status = pd.get("status")
             if status == "Ready":
-                imgs = pd.get("result", {}).get("sample", [])
-                if not isinstance(imgs, list):
-                    imgs = [imgs]
-                # убедимся, что ровно 3 — добавим заглушки или усекаем
-                imgs = imgs[:3]  
-                while len(imgs) < 3:
-                    imgs.append("https://placehold.co/600x600?text=Missing")
+                sample = pd.get("result", {}).get("sample")
+                # если API вернул список — берём первый элемент
+                if isinstance(sample, list):
+                    return sample[0]
+                return sample  # предполагаем строку URL
+            if status in ("Error", "Failed"):
+                raise HTTPException(502, f"Flux generation failed: {pd}")
 
-                logger.debug(f"Flux returned {len(imgs)} image URLs: {imgs}")
-                return imgs
+# 2) Основная функция — делает count последовательных запросов
+async def call_flux(
+    prompt: str,
+    reference: Optional[str],
+    fmt: str,
+    mode: str,
+    count: int = 3,
+) -> List[str]:
+    images: List[str] = []
+    for _ in range(count):
+        url = await call_single_flux(prompt, reference, fmt, mode)
+        images.append(url)
+    return images
+
+
+async def upload_to_cdn(urls: list[str]) -> list[str]:
+    async with httpx.AsyncClient(timeout=60) as client:
+        # допустим, сервис принимает JSON { "files": [ "<flux-url1>", ... ] }
+        r = await client.post(config.cdn_endpoint, json={"files": urls})
+        r.raise_for_status()
+        data = r.json()
+        return data.get("uploaded", [])
+
 
 # ── SQLModel ORM models ────────────────────────────────────────────────
 
@@ -111,13 +110,28 @@ async def call_flux(
 #     ]
 # ────────────────────────────────────────────────────────────────────────────
 
+class ImageLayer(SQLModel):
+    """ DTO для одного слоя — в pydantic‑схеме """
+    type: str
+    x: float
+    y: float
+    props: dict
+
+class GeneratedImage(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    cover_id: int = Field(foreign_key="generatedcover.id")
+    url: str
+    layers: List[dict] = Field(sa_column=Column(JSON), default_factory=list)
+    cover: Optional["GeneratedCover"] = Relationship(back_populates="images")
+
+
 class GeneratedCover(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     prompt: str
-    reference: Optional[str] = None
+    reference: Optional[str]
     format: str
     mode: str
-    images: List[str] = Field(sa_column=Column(JSON), default_factory=list)
+    images: List[GeneratedImage] = Relationship(back_populates="cover", sa_relationship_kwargs={"cascade":"all, delete-orphan"})
 
 class TemplateGroup(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -145,7 +159,7 @@ class ExampleItem(SQLModel, table=True):
     group_id: Optional[int] = Field(default=None, foreign_key="examplegroup.id")
     group: Optional[ExampleGroup] = Relationship(back_populates="items")
 
-class FavoriteTemplate(SQLModel, table=True):
+class MyTemplate(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     src: str
     alt: Optional[str]
@@ -158,6 +172,7 @@ class GenerateRequest(BaseModel):
     reference: Optional[str] = None
     format: str
     mode: str
+    count: conint(ge=1, le=10) = 3
 
 class GenerateResponse(BaseModel):
     group_id: int
@@ -167,6 +182,12 @@ class Item(BaseModel):
     src: str
     alt: Optional[str]
     aspect: str
+    layers: List[dict] = []
+
+class ImageOut(BaseModel):
+    id: int
+    url: str
+    layers: List[dict]
 
 class GroupOut(BaseModel):
     id: int
@@ -187,8 +208,13 @@ SQLModel.metadata.create_all(engine)
 
 def seed_data():
     with Session(engine) as session:
+        exists = session.exec(select(TemplateGroup)).first()
+        print("TemplateGroup exists?", bool(exists))
+
         # Templates
         if not session.exec(select(TemplateGroup)).first():
+            if not exists:
+                print("Seeding TemplateGroup…")
             for title, (src, alt, aspect, count) in [
                 ("Наука", ("https://placehold.co/300x150","Превью","16:9",6)),
                 ("Врачи", ("https://placehold.co/300x150","Превью","16:9",2)),
@@ -206,14 +232,14 @@ def seed_data():
             session.commit()
             for _ in range(6):
                 session.add(ExampleItem(src="https://placehold.co/300x150", alt="Превью", aspect="16:9", group_id=grp.id))
-        # Favorites
-        if not session.exec(select(FavoriteTemplate)).first():
+        # My Templates
+        if not session.exec(select(MyTemplate)).first():
             for url in [
                 "https://placehold.co/130x75?text=Ref+1",
                 "https://placehold.co/130x75?text=Ref+2",
                 "https://placehold.co/130x75?text=Ref+3",
             ]:
-                session.add(FavoriteTemplate(src=url, alt="ref", aspect="16:9"))
+                session.add(MyTemplate(src=url, alt="ref", aspect="16:9"))
         session.commit()
 
 seed_data()
@@ -233,59 +259,132 @@ async def generate(req: GenerateRequest):
     if not req.prompt and req.mode == "ai":
         raise HTTPException(400, "Prompt is required for AI mode")
 
+    flux_urls = await call_flux(req.prompt, req.reference, req.format, req.mode, req.count)
+
     try:
-        images = await call_flux(req.prompt, req.reference, req.format, req.mode)
-        gen = GeneratedCover(
+        cdn_urls = await upload_to_cdn(flux_urls)
+    except httpx.HTTPError as e:
+        # если заливка в CDN упала — можно всё равно вернуть оригиналы
+        cdn_urls = flux_urls
+        logger.warning(f"Upload to CDN failed, using flux urls: {e}")
+        # raise HTTPException(502, f"Upload to CDN failed: {e}")
+
+    with Session(engine) as session:
+        cover = GeneratedCover(
             prompt=req.prompt,
             reference=req.reference,
             format=req.format,
             mode=req.mode,
-            images=images,
         )
-        with Session(engine) as session:
-            session.add(gen)
-            session.commit()
-            session.refresh(gen)
+        session.add(cover); session.commit(); session.refresh(cover)
 
-        return {"group_id": gen.id, "images": images}
-    except Exception as e:
-            raise HTTPException(status_code=502, detail=f"Flux error: {e}")
+        # создаём связанные записи
+        for url in cdn_urls:
+            img = GeneratedImage(
+                cover_id=cover.id,
+                url=url,
+                layers=[
+                    {
+                        "id": "bg",               # уникальный идентификатор фонового слоя
+                        "type": "image",
+                        "image": url,             # путь к фону
+                        "x": 0,
+                        "y": 0,
+                        "visible": True,
+                        "lock": True,
+                    }
+                ],
+            )
+            session.add(img)
+        session.commit()
+
+        # вытаскиваем их назад
+        images = session.exec(
+            select(GeneratedImage).where(GeneratedImage.cover_id == cover.id)
+        ).all()
+
+    return {
+        "group_id": cover.id,
+        "images": [
+            ImageOut(id=i.id, url=i.url, layers=i.layers) for i in images
+        ],
+    }
 
 @app.post("/api/regenerate/{group_id}", response_model=GenerateResponse)
 async def regenerate(group_id: int):
     with Session(engine) as session:
-        gen = session.get(GeneratedCover, group_id)
-        if not gen:
-            raise HTTPException(404, "Group not found")
-    images = await call_flux(gen.prompt, gen.reference, gen.format, gen.mode, settings)
+        cover = session.get(GeneratedCover, group_id) or HTTPException(404, "Not found")
+    flux_urls = await call_flux(cover.prompt, cover.reference, cover.format, cover.mode, cover.count)
+
+    try:
+        cdn_urls = await upload_to_cdn(flux_urls)
+    except httpx.HTTPError as e:
+        # если заливка в CDN упала — можно всё равно вернуть оригиналы
+        cdn_urls = flux_urls
+
+        raise HTTPException(502, f"Upload to CDN failed: {e}")
+
     with Session(engine) as session:
-        gen.images = images
-        session.add(gen)
+        # удаляем старые
+        session.exec(
+            delete(GeneratedImage).where(GeneratedImage.cover_id == group_id)
+        )
+        # вставляем новые, сохраняя пустые слои
+        for url in cdn_urls:
+            session.add(GeneratedImage(cover_id=group_id, url=url, layers=[]))
         session.commit()
-    return {"group_id": group_id, "images": images}
+
+        images = session.exec(
+            select(GeneratedImage).where(GeneratedImage.cover_id == group_id)
+        ).all()
+
+    return {
+        "group_id": group_id,
+        "images": [ImageOut(id=i.id, url=i.url, layers=i.layers) for i in images],
+    }
 
 @app.get("/api/generated", response_model=List[GeneratedGroupOut])
 def list_generated():
     with Session(engine) as session:
-        gens = session.exec(select(GeneratedCover)).all()
+        stmt = select(GeneratedCover).options(selectinload(GeneratedCover.images))
+        covers = session.exec(stmt).all()
 
-    result: List[GeneratedGroupOut] = []
-    for g in gens:
-        items = [Item(src=url, alt="", aspect=g.format) for url in g.images]
-        result.append(GeneratedGroupOut(
-            id=g.id,
-            title=g.prompt,
-            params=GenerateRequest(
-                prompt=g.prompt,
-                reference=g.reference,
-                format=g.format,
-                mode=g.mode
-            ),
-            orientation=g.format,
-            items=items
-        ))
-
+    result = []
+    for cover in covers:
+        items = [
+            Item(
+                src=img.url,
+                alt="",
+                aspect=cover.format,
+                layers=img.layers
+            )
+            for img in cover.images
+        ]
+        result.append(
+            GeneratedGroupOut(
+                id=cover.id,
+                title=cover.prompt,
+                params=GenerateRequest(
+                    prompt=cover.prompt,
+                    reference=cover.reference,
+                    format=cover.format,
+                    mode=cover.mode
+                ),
+                orientation=cover.format,
+                items=items
+            )
+        )
     return result
+
+@app.delete("/api/generated/{group_id}", status_code=204)
+def delete_generated(group_id: int):
+    with Session(engine) as session:
+        gen = session.get(GeneratedCover, group_id)
+        if not gen:
+            raise HTTPException(404, "Group not found")
+        session.delete(gen)
+        session.commit()
+    return
 
 @app.get("/api/templates", response_model=List[GroupOut])
 def list_templates():
@@ -317,8 +416,21 @@ def list_examples():
             ))
     return out
 
-@app.get("/api/favorites", response_model=List[Item])
-def list_favorites():
+@app.get("/api/my-templates", response_model=List[Item])
+def list_my_templates():
     with Session(engine) as session:
-        favs = session.exec(select(FavoriteTemplate)).all()
+        favs = session.exec(select(MyTemplate)).all()
     return [Item(src=f.src, alt=f.alt, aspect=f.aspect) for f in favs]
+
+
+@app.patch("/api/generated/{group_id}/image/{image_id}/layers", status_code=204)
+def update_layers(group_id: int, image_id: int, layers: List[dict]):
+    """ Сохраняем на бэке состояние слоёв для конкретного изображения """
+    with Session(engine) as session:
+        img = session.get(GeneratedImage, image_id)
+        if not img or img.cover_id != group_id:
+            raise HTTPException(404, "Image not found")
+        img.layers = layers
+        session.add(img)
+        session.commit()
+    return

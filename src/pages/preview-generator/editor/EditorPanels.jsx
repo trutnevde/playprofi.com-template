@@ -354,7 +354,7 @@ export const EraserToolPanel = () => {
               cy="10"
               r="9.5"
               stroke="white"
-              stroke-opacity="0.7"
+              strokeOpacity="0.7"
             />
           </svg>
 
@@ -379,7 +379,7 @@ export const EraserToolPanel = () => {
               cy="24"
               r="23.5"
               stroke="white"
-              stroke-opacity="0.7"
+              strokeOpacity="0.7"
             />
           </svg>
         </div>

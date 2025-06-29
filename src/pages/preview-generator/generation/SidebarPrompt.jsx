@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { FaImage, FaPlus, FaVideo } from "react-icons/fa";
 import SvgHeart from "../../../shared/components/icons/Heart";
-import { orientationOptions } from "../PreviewGeneratorPage";
+import { ASPECT_OPTIONS } from "../EditorContext";
 import IconGem from "../../../shared/assets/icons/gem.svg?react";
 
 import { Trash } from "iconsax-react";
@@ -180,12 +180,12 @@ export const SidebarPrompt = ({
               className={`flex items-center gap-2 transition-colors duration-300 ${isFormatMenuOpen ? "text-white" : ""}`}
               onClick={() => setIsFormatMenuOpen((prev) => !prev)}
             >
-              <span>Формат ({orientationOptions[selectedFormat].label})</span>
+              <span>Формат ({ASPECT_OPTIONS[selectedFormat].label})</span>
               <FaChevronDown />
             </button>
             {isFormatMenuOpen && (
               <div className="absolute right-0 top-full z-10 mt-2 flex w-max flex-col overflow-hidden rounded-2xl bg-dark-graphite shadow-lg-hover-card">
-                {Object.entries(orientationOptions).map(
+                {Object.entries(ASPECT_OPTIONS).map(
                   ([key, { fullLabel, preview }]) => {
                     const [title, subtitle] = fullLabel.split("\n");
                     return (
