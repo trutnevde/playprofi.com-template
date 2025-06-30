@@ -104,7 +104,7 @@ const LeftPanel = ({
       )}
 
       {activeFolder == "default" && (
-        <div className={`flex flex-col ${baseClass} space-y-5`}>
+        <div className={`${baseClass} space-y-5`}>
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-light">Готовые шаблоны</h2>
             <button
@@ -130,7 +130,7 @@ const LeftPanel = ({
         </div>
       )}
       {activeFolder === "templates" && (
-        <div className={`flex flex-grow flex-col ${baseClass} space-y-4`}>
+        <div className={`flex-grow ${baseClass} space-y-4`}>
           {/* Поиск */}
           <div className="flex gap-[10px]">
             <div className="flex-grow-0 overflow-hidden rounded-[20px]">
@@ -181,18 +181,20 @@ const LeftPanel = ({
       )}
 
       {activeFolder !== "default" && activeFolder !== "templates" && (
-        <div className={`h-full space-y-10 ${baseClass}`}>
-          {groupsToRender.map((group, gi) => (
-            <CoverGroup
-              key={gi}
-              title={group.title}
-              items={group.items}
-              onDrag={group.onDrag}
-              onRegenGroup={() => onRegenGroup(group.id)}
-              onDeleteGroup={() => onDeleteGroup(group.id)}
-              onEditCard={onEditCard}
-            />
-          ))}
+        <div className={`h-full ${baseClass}`}>
+          <div className="flex flex-col-reverse gap-y-10">
+            {groupsToRender.map((group, gi) => (
+              <CoverGroup
+                key={gi}
+                title={group.title}
+                items={group.items}
+                onDrag={group.onDrag}
+                onRegenGroup={() => onRegenGroup(group.id)}
+                onDeleteGroup={() => onDeleteGroup(group.id)}
+                onEditCard={onEditCard}
+              />
+            ))}
+          </div>
 
           {!groupsToRender.length && (
             <>

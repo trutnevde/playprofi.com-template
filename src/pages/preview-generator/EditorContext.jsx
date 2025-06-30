@@ -9,6 +9,10 @@ import Square from "../../shared/assets/icons/square.svg?react";
 import Eraser from "../../shared/assets/icons/eraser.svg?react";
 import Sticker from "../../shared/assets/icons/sticker.svg?react";
 
+import Format16x9 from "../../shared/assets/icons/preview-format/16-9.svg?react";
+import Format9x16 from "../../shared/assets/icons/preview-format/9-16.svg?react";
+import Format1x1 from "../../shared/assets/icons/preview-format/1.svg?react";
+
 // Список всех возможных инструментов (кроме crop)
 export const TOOL_KEYS = [
   {
@@ -61,19 +65,19 @@ export const ASPECT_OPTIONS = {
     label: "16:9",
     fullLabel: "YouTube. Обложка видео\n1280×720 (16:9)",
     className: "aspect-[16/9]",
-    preview: <svg width="65" height="36" /* ... */ />,
+    preview: <Format16x9 />,
   },
   "9:16": {
     label: "9:16",
     fullLabel: "YouTube Shorts. Обложка видео\n720×1280 (9:16)",
     className: "aspect-[9/16]",
-    preview: <svg width="25" height="42" /* ... */ />,
+    preview: <Format9x16 />,
   },
   square: {
     label: "Квадрат",
     fullLabel: "Квадратный формат\n720×720 (1:1)",
     className: "aspect-1",
-    preview: <svg width="36" height="36" /* ... */ />,
+    preview: <Format1x1 />,
   },
 };
 

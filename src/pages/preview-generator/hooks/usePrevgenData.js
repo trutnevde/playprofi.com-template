@@ -12,6 +12,7 @@ export function usePrevgenData() {
   const [templates, setTemplates] = useState([]);
   const [examples, setExamples] = useState([]);
   const [myTemplates, setMyTemplates] = useState([]);
+  const [tasks, setTasks] = useState([]);
 
   useEffect(() => {
     listGenerated()
@@ -35,5 +36,14 @@ export function usePrevgenData() {
       .catch(() => setMyTemplates([]));
   }, []);
 
-  return { generated, templates, examples, myTemplates, setGenerated };
+  return {
+    generated,
+    templates,
+    examples,
+    myTemplates,
+    tasks,
+    setGenerated,
+    setMyTemplates,
+    setTasks,
+  };
 }

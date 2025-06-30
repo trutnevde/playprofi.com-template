@@ -1,19 +1,17 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, BackgroundTasks, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import SQLModel, Field, Relationship, Session, create_engine, select
-from sqlalchemy import Column, JSON, delete
+from enum import Enum as PyEnum
+from sqlalchemy import Column, JSON, delete, Enum as SQLEnum
 from sqlalchemy.orm import selectinload
-from pydantic import BaseModel, conint, HttpUrl
+from pydantic import BaseModel
 from pydantic_settings import BaseSettings
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Any
 import httpx
-import os
-from dotenv import load_dotenv, find_dotenv
 import asyncio
 import logging
 import config
 import io
-import ast
 
 logger = logging.getLogger('uvicorn.error')
 logger.setLevel(logging.DEBUG)
@@ -138,6 +136,39 @@ async def upload_to_cdn(urls: List[str]) -> List[str]:
 #     ]
 # ────────────────────────────────────────────────────────────────────────────
 
+class JobStatus(str, PyEnum):
+    pending = "pending"
+    in_progress = "in_progress"
+    ready = "ready"
+    failed = "failed"
+
+class GenerationJob(SQLModel, table=True):
+    __tablename__ = "generationjob"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    prompt: str
+    reference: Optional[str] = None
+    format: str
+    mode: str
+
+    # используем настоящий Enum
+    status: JobStatus = Field(
+        sa_column=Column(
+            SQLEnum(JobStatus, name="jobstatus", create_type=False),
+            default=JobStatus.pending,
+            nullable=False,
+        )
+    )
+
+    # хранит JSON‑список URL (или None, если ещё не готово)
+    result: Optional[List[str]] = Field(
+        default=None,
+        sa_column=Column(JSON, nullable=True),
+    )
+
+    # текст ошибки, если что‑то упало
+    error: Optional[str] = None
+
 class ImageLayer(SQLModel):
     """ DTO для одного слоя — в pydantic‑схеме """
     type: str
@@ -229,6 +260,12 @@ class GenerateResponse(BaseModel):
     group_id: int
     images: List[ImageOut]
 
+class JobResponse(BaseModel):
+    job_id: int
+    status: JobStatus
+    result: Optional[List[str]] = None
+    error: Optional[str] = None
+
 class Item(BaseModel):
     src: str
     alt: Optional[str]
@@ -254,7 +291,7 @@ SQLModel.metadata.create_all(engine)
 print("Using database:", engine.url)
 
 def seed_data():
-    with Session(engine) as session:
+    with Session(engine, expire_on_commit=False) as session:
         exists = session.exec(select(TemplateGroup)).first()
 
         # Templates
@@ -300,85 +337,92 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.post("/api/generate", response_model=GenerateResponse)
-async def generate(req: GenerateRequest):
-    if not req.prompt and req.mode == "ai":
-        raise HTTPException(400, "Prompt is required for AI mode")
-
-    flux_urls = await call_flux(req.prompt, req.reference, req.format, req.mode, req.count)
-
-    try:
-        cdn_urls = await upload_to_cdn(flux_urls)
-    except httpx.HTTPError as e:
-        # если загрузка в CDN упала — можно всё равно вернуть оригиналы
-        cdn_urls = flux_urls
-        logger.warning(f"Upload to CDN failed, using flux urls: {e}")
-        # raise HTTPException(502, f"Upload to CDN failed: {e}")
-
-    with Session(engine) as session:
-        cover = GeneratedGroup(
+@app.post("/api/generate", response_model=JobResponse)
+async def generate(req: GenerateRequest, background_tasks: BackgroundTasks):
+    job_data = {}
+    with Session(engine, expire_on_commit=False) as session:
+        job = GenerationJob(
             prompt=req.prompt,
             reference=req.reference,
             format=req.format,
             mode=req.mode,
+            status=JobStatus.pending,
         )
-        session.add(cover); session.commit(); session.refresh(cover)
+        session.add(job)
+        session.commit()
+        session.refresh(job)
+        job_data = {"job_id": job.id, "status": job.status}
 
-        # создаём связанные записи
-        for src in cdn_urls:
-            img = GeneratedImage(
-                cover_id=cover.id,
-                src=src,
-                layers=[
-                    {
-                        "id": "bg",
-                        "type": "image",
-                        "image": src,
-                        "x": 0,
-                        "y": 0,
-                        "visible": True,
-                        "lock": True,
-                    }
-                ],
+    background_tasks.add_task(run_generation, job.id, req.count)
+
+    return JobResponse(**job_data)
+
+
+@app.get("/api/generate/{job_id}/status", response_model=JobResponse)
+def get_status(job_id: int):
+    with Session(engine, expire_on_commit=False) as session:
+        job = session.get(GenerationJob, job_id)
+        if not job:
+            raise HTTPException(404, "Job not found")
+        return JobResponse(
+            job_id=job.id,
+            status=job.status,
+            result=job.result,
+            error=job.error,
+        )
+
+@app.post("/api/regenerate/{job_id}", response_model=JobResponse)
+async def regenerate(job_id: int, background_tasks: BackgroundTasks):
+    with Session(engine, expire_on_commit=False) as session:
+        job = session.get(GenerationJob, job_id)
+        if not job:
+            raise HTTPException(404, "Job not found")
+
+    # создаём новую задачу с теми же параметрами
+    new_job = GenerationJob(
+        prompt=job.prompt,
+        reference=job.reference,
+        format=job.format,
+        mode=job.mode,
+        status=JobStatus.pending,
+    )
+    with Session(engine, expire_on_commit=False) as session:
+        session.add(new_job)
+        session.commit()
+        session.refresh(new_job)
+
+    background_tasks.add_task(run_generation, new_job.id, len(job.result or []))
+
+    return JobResponse(job_id=new_job.id, status=new_job.status)
+
+async def run_generation(job_id: int, count: int):
+    with Session(engine, expire_on_commit=False) as session:
+        job = session.get(GenerationJob, job_id)
+        job.status = JobStatus.in_progress
+        session.commit()
+
+        try:
+            # 1) Генерируем изображения через Flux
+            flux_urls = await call_flux(job.prompt, job.reference, job.format, job.mode, count)
+            # 2) Загружаем их в CDN
+            cdn_urls = await upload_to_cdn(flux_urls)
+
+            # 3) Сохраняем группу и связанные изображения
+            cover = GeneratedGroup(
+                prompt=job.prompt,
+                reference=job.reference,
+                format=job.format,
+                mode=job.mode,
             )
-            session.add(img)
-        session.commit()
+            session.add(cover)
+            session.commit()
+            session.refresh(cover)
 
-        # вытаскиваем их назад
-        images = session.exec(
-            select(GeneratedImage).where(GeneratedImage.cover_id == cover.id)
-        ).all()
-
-    return {
-        "group_id": cover.id,
-        "images": [
-            ImageOut(id=i.id, src=i.src, layers=i.layers, aspect=cover.format) for i in images
-        ],
-    }
-
-@app.post("/api/regenerate/{group_id}", response_model=GenerateResponse)
-async def regenerate(group_id: int):
-    with Session(engine) as session:
-        cover = session.get(GeneratedGroup, group_id) or HTTPException(404, "Not found")
-    flux_urls = await call_flux(cover.prompt, cover.reference, cover.format, cover.mode, cover.count)
-
-    try:
-        cdn_urls = await upload_to_cdn(flux_urls)
-    except httpx.HTTPError as e:
-        # если заливка в CDN упала — можно всё равно вернуть оригиналы
-        cdn_urls = flux_urls
-
-        raise HTTPException(502, f"Upload to CDN failed: {e}")
-
-    with Session(engine) as session:
-        # удаляем старые
-        session.exec(
-            delete(GeneratedImage).where(GeneratedImage.cover_id == group_id)
-        )
-        # вставляем новые, сохраняя пустые слои
-        for src in cdn_urls:
-            session.add(GeneratedImage(cover_id=group_id, src=src, aspect=cover.format, layers=[
-                    {
+            for src in cdn_urls:
+                img = GeneratedImage(
+                    cover_id=cover.id,
+                    src=src,
+                    layers=[{
                         "id": "bg",
                         "type": "image",
                         "image": src,
@@ -386,56 +430,73 @@ async def regenerate(group_id: int):
                         "y": 0,
                         "visible": True,
                         "lock": True,
-                    }
-                ],))
-        session.commit()
+                    }],
+                )
+                session.add(img)
+            session.commit()
 
-        images = session.exec(
-            select(GeneratedImage).where(GeneratedImage.cover_id == group_id)
-        ).all()
+            # 4) Обновляем саму задачу
+            job.result = cdn_urls
+            job.status = JobStatus.ready
+            session.commit()
 
-    return {
-        "group_id": group_id,
-        "images": [ImageOut(id=i.id, src=i.src, layers=i.layers) for i in images],
-    }
+        except Exception as e:
+            job.status = JobStatus.failed
+            job.error = str(e)
+            session.commit()
+            logger.error(f"Job {job_id} failed: {e}", exc_info=True)
+
+from typing import List
+from fastapi import HTTPException
+from sqlmodel import select, Session
+from sqlalchemy.orm import selectinload
 
 @app.get("/api/generated", response_model=List[GeneratedGroupOut])
 def list_generated():
-    with Session(engine) as session:
-        stmt = select(GeneratedGroup).options(selectinload(GeneratedGroup.images))
-        covers = session.exec(stmt).all()
+    with Session(engine, expire_on_commit=False) as session:
+        groups = session.exec(
+            select(GeneratedGroup)
+            .options(selectinload(GeneratedGroup.images))
+        ).all()
 
-    result = []
-    for cover in covers:
-        items = [
-            ImageOut(
-                id=img.id,
-                src=img.src,
-                alt="",
-                aspect=cover.format,
-                layers=img.layers
+        if not groups:
+            return []  # или HTTPException(404), если хотите 404 при пустом
+
+        out: List[GeneratedGroupOut] = []
+        for grp in groups:
+            params = GenerateRequest(
+                prompt=grp.prompt,
+                reference=grp.reference,
+                format=grp.format,
+                mode=grp.mode,
+                count=len(grp.images),
             )
-            for img in cover.images
-        ]
-        result.append(
-            GeneratedGroupOut(
-                id=cover.id,
-                title=cover.prompt,
-                params=GenerateRequest(
-                    prompt=cover.prompt,
-                    reference=cover.reference,
-                    format=cover.format,
-                    mode=cover.mode
-                ),
-                orientation=cover.format,
-                items=items
-            )
-        )
-    return result
+
+            items = [
+                ImageOut(
+                    id=img.id,
+                    src=img.src,
+                    alt=img.layers[0].get("alt", "") if img.layers else "",
+                    aspect=grp.format,
+                    layers=img.layers or [],
+                )
+                for img in grp.images
+            ]
+
+            out.append(GeneratedGroupOut(
+                id=grp.id,
+                title=grp.prompt,          # можно заменить на любое другое поле
+                params=params,
+                orientation=grp.format,
+                items=items,
+            ))
+
+        return out
+
 
 @app.delete("/api/generated/{group_id}", status_code=204)
 def delete_generated(group_id: int):
-    with Session(engine) as session:
+    with Session(engine, expire_on_commit=False) as session:
         gen = session.get(GeneratedGroup, group_id)
         if not gen:
             raise HTTPException(404, "Group not found")
@@ -491,3 +552,30 @@ def update_layers(group_id: int, image_id: int, layers: List[dict]):
         session.add(img)
         session.commit()
     return
+
+
+# WebSocket
+@app.websocket("/ws/generate/{job_id}")
+async def ws_generate(ws: WebSocket, job_id: int):
+    await ws.accept()
+    while True:
+        with Session(engine) as session:
+            job = session.get(GenerationJob, job_id)
+            if not job:
+                await ws.send_json({"error": "Job not found"})
+                await ws.close()
+                return
+
+            payload = {
+                "job_id": job.id,
+                "status": job.status,
+                "result": job.result,
+                "error": job.error,
+            }
+        await ws.send_json(payload)
+
+        if job.status in (JobStatus.ready, JobStatus.failed):
+            await ws.close()
+            return
+
+        await asyncio.sleep(1)

@@ -5,16 +5,17 @@ import EditorCanvas from "./Editor/EditorCanvas";
 import { EditorSidebar } from "./editor/EditorSidebar";
 import { SidebarPrompt } from "./generation/SidebarPrompt";
 import { EditorProvider } from "./EditorContext";
-import { FaPlus } from "react-icons/fa6";
 import { FolderModal } from "./Folders";
 import { usePrevgenData } from "./hooks/usePrevgenData";
 import {
   deleteGroup,
-  generateGroup,
+  startGeneration,
+  regenerateJob,
+  fetchGenerationStatus,
   listGenerated,
-  regenerateGroup,
 } from "./api/prevgen";
 import MaClose from "../../shared/assets/icons/material-symbols-close.svg?react";
+import { uniqueId } from "lodash";
 
 const PreviewGeneratorPage = () => {
   const { t } = useTranslation("translation", {
@@ -22,8 +23,15 @@ const PreviewGeneratorPage = () => {
   });
 
   // === State для всех четырёх источников данных ===
-  const { generated, templates, examples, myTemplates, setGenerated } =
-    usePrevgenData();
+  const {
+    generated,
+    templates,
+    examples,
+    myTemplates,
+    tasks,
+    setGenerated,
+    setTasks,
+  } = usePrevgenData();
 
   // === State для папок (tabs) ===
   const [folders, setFolders] = useState([
@@ -53,109 +61,335 @@ const PreviewGeneratorPage = () => {
         return templates;
       case "myTemplates":
         return myTemplates;
-      case "ai":
-        return generated;
-      default:
+      case "ai": {
+        // AI: показываем сначала локальные задачи, затем серверные группы
+        const local = tasks
+          .filter((t) => t.status !== "ready")
+          .map(taskToGroup);
+        const server = generated.map(apiGroupToLocal);
+        return [...server, ...local];
+      }
+      default: {
         return [];
+      }
     }
   };
 
   const refreshGenerated = () =>
     listGenerated()
       .then(setGenerated)
-      .catch(() => {
-        /* noop */
-      });
+      .catch(() => {});
 
   const refPromptPanel = useRef();
   const refLeftPanel = useRef();
 
+  const taskToGroup = (task) => ({
+    id: task.jobId || task.tempId,
+    title: task.prompt,
+    params: {
+      prompt: task.prompt,
+      reference: task.reference,
+      format: task.format,
+      mode: task.mode,
+    },
+    orientation: task.format,
+    items:
+      task.status === "ready"
+        ? task.result.map((src) => ({
+            src,
+            alt: "",
+            aspect: task.format,
+            layers: [
+              {
+                id: "bg",
+                type: "image",
+                image: src,
+                x: 0,
+                y: 0,
+                visible: true,
+                lock: true,
+              },
+            ],
+          }))
+        : Array(3).fill({
+            src: null,
+            alt: "",
+            aspect: task.format,
+            loading: true,
+            error: task.status === "failed",
+          }),
+  });
+
+  const apiGroupToLocal = (g) => ({
+    id: g.id,
+    title: g.title,
+    params: g.params,
+    orientation: g.orientation,
+    items: g.items.map((i) => ({
+      src: i.src,
+      alt: i.alt,
+      aspect: g.orientation,
+      layers: i.layers,
+    })),
+  });
+
   // === Генерация нового набора ===
+
   const handleCreate = async (mode = "ai") => {
     const text = prompt.trim();
     if (!text && mode === "ai") return;
 
     const fmt = selectedFormat;
+    const folderKey = activeFolder === "default" ? "ai" : activeFolder;
 
-    // подготовим скелетон
-    const newGroupSkeleton = {
-      id: null,
-      title:
-        mode === "ai"
-          ? text
-          : mode === "video"
-            ? "По видео"
-            : "По фото/объекту",
-      params: { prompt: text, reference: selectedReference, format: fmt, mode },
-      orientation: fmt,
-      items: Array(3).fill({ src: null, alt: "", aspect: fmt, loading: true }),
-    };
-
-    setGenerated((prev) => [newGroupSkeleton, ...(prev || [])]);
+    // 1) Добавляем новую задачу со статусом pending
+    const tempId = uniqueId();
+    setTasks((prev) => [
+      ...prev,
+      {
+        tempId,
+        prompt: text,
+        reference: selectedReference,
+        format: fmt,
+        mode,
+        folderKey,
+        status: "pending",
+      },
+    ]);
     setActiveFolder("ai");
 
+    // Отрисовываем скелетон
+    // const skeleton = {
+    //   id: null,
+    //   title:
+    //     mode === "ai"
+    //       ? text
+    //       : mode === "video"
+    //         ? "По видео"
+    //         : "По фото/объекту",
+    //   params: { prompt: text, reference: selectedReference, format: fmt, mode },
+    //   orientation: fmt,
+    //   items: Array(3).fill({ src: null, alt: "", aspect: fmt, loading: true }),
+    // };
+    // setGenerated((prev) => [skeleton, ...(prev || [])]);
+    // setActiveFolder("ai");
+
     try {
-      // вместо прямого fetch используем утилиту
-      const { group_id, images } = await generateGroup({
+      // Инициируем задачу
+      const { job_id, status } = await startGeneration({
         prompt: text,
         reference: selectedReference,
         format: fmt,
         mode,
         count: 3,
       });
+      if (status !== "pending") {
+        throw new Error("Не удалось запустить задачу генерации");
+      }
 
-      // сразу вставляем полученные картинки вместо скелетона
-      setGenerated((prev) => {
-        const rest = prev.slice(1); // отрезаем скелетон
-        return [
-          {
-            id: group_id,
-            title: text,
-            params: {
-              prompt: text,
-              reference: selectedReference,
-              format: fmt,
-              mode,
-            },
-            orientation: fmt,
-            items: images.map((img) => ({
-              src: img.src,
-              alt: img.alt,
-              aspect: img.aspect,
-              layers: img.layers,
-            })),
-          },
-          ...rest,
-        ];
-      });
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.tempId === tempId
+            ? { ...t, jobId: job_id, status: "in_progress" }
+            : t,
+        ),
+      );
+
+      pollJob(tempId, job_id);
+
+      // Polling статуса
+      const timer = setInterval(async () => {
+        try {
+          console.log("Polling... ", job_id);
+
+          const status = await fetchGenerationStatus(job_id);
+          if (status.status === "ready" && Array.isArray(status.result)) {
+            clearInterval(timer);
+            setTasks((prev) =>
+              prev
+                .map((t) =>
+                  t.tempId === tempId
+                    ? { ...t, status: "ready", result: status.result }
+                    : t,
+                )
+                .filter((t) => t.status !== "ready"),
+            );
+            // Заменяем скелетон на реальный результат
+            setGenerated((prev) => {
+              return [
+                ...prev,
+                {
+                  id: job_id,
+                  title: text,
+                  params: {
+                    prompt: text,
+                    reference: selectedReference,
+                    format: fmt,
+                    mode,
+                  },
+                  orientation: fmt,
+                  items: status.result.map((src) => ({
+                    src,
+                    alt: "",
+                    aspect: fmt,
+                    layers: [
+                      {
+                        id: "bg",
+                        type: "image",
+                        image: src,
+                        x: 0,
+                        y: 0,
+                        visible: true,
+                        lock: true,
+                      },
+                    ],
+                  })),
+                },
+              ];
+            });
+          }
+          if (status.status === "failed") {
+            clearInterval(timer);
+            console.error("Generation failed:", status);
+            // Показываем ошибку на скелетоне
+            setGenerated((prev) =>
+              prev.map((g, i) =>
+                i === 0
+                  ? {
+                      ...g,
+                      items: Array(3).fill({
+                        src: null,
+                        alt: "",
+                        aspect: fmt,
+                        loading: false,
+                        error: true,
+                      }),
+                    }
+                  : g,
+              ),
+            );
+          }
+        } catch (e) {
+          clearInterval(timer);
+          console.error("Ошибка при опросе статуса:", e);
+        }
+      }, 1000);
     } catch (err) {
-      console.error("Generation failed:", err);
-      // показываем ошибку на первом элементе
-      setGenerated((prev) =>
-        prev.map((g, idx) =>
-          idx === 0
-            ? {
-                ...g,
-                items: Array(3).fill({
-                  src: null,
-                  alt: "",
-                  aspect: fmt,
-                  loading: false,
-                  error: true,
-                }),
-              }
-            : g,
+      console.error("Start generation failed:", err);
+      // Метим первый элемент как ошибку
+      // setGenerated((prev) =>
+      //   prev.map((g, i) =>
+      //     i === 0
+      //       ? {
+      //           ...g,
+      //           items: Array(3).fill({
+      //             src: null,
+      //             alt: "",
+      //             aspect: fmt,
+      //             loading: false,
+      //             error: true,
+      //           }),
+      //         }
+      //       : g,
+      //   ),
+      // );
+
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.tempId === tempId ? { ...t, status: "failed", error: true } : t,
         ),
       );
     }
   };
 
-  const handleRegenerate = async (groupId) => {
-    await regenerateGroup(groupId);
-    await refreshGenerated();
+  const pollRefs = useRef({});
+
+  const pollJob = (tempId, jobId) => {
+    // если уже есть таймер — убираем старый
+    clearInterval(pollRefs.current[tempId]);
+
+    const timer = window.setInterval(async () => {
+      try {
+        const status = await fetchGenerationStatus(jobId);
+        if (status.status === "ready" && Array.isArray(status.result)) {
+          clearInterval(timer);
+          // апдейтим status + результат
+          setTasks((prev) =>
+            prev.map((t) =>
+              t.tempId === tempId
+                ? { ...t, status: "ready", result: status.result }
+                : t,
+            ),
+          );
+        } else if (status.status === "failed") {
+          clearInterval(timer);
+          setTasks((prev) =>
+            prev.map((t) =>
+              t.tempId === tempId ? { ...t, status: "failed", error: true } : t,
+            ),
+          );
+        }
+      } catch (e) {
+        clearInterval(timer);
+        setTasks((prev) =>
+          prev.map((t) =>
+            t.tempId === tempId ? { ...t, status: "failed", error: true } : t,
+          ),
+        );
+      }
+    }, 1000);
+
+    pollRefs.current[tempId] = timer;
+  };
+
+  const handleRegenerate = async (tempId, jobId) => {
+    const newTempId = uniqueId();
+    // рендерим skeleton для нового tempId
+    setTasks((prev) => {
+      const prevTask = prev.find((t) => t.jobId === jobId);
+      const fallback = {
+        prompt: "",
+        reference: null,
+        format: "16:9",
+        mode: "ai",
+        folderKey: "ai",
+      };
+      return [
+        {
+          ...fallback,
+          ...prevTask,
+          tempId: newTempId,
+          jobId: undefined,
+          status: "pending",
+        },
+        ...prev,
+      ];
+    });
+
+    try {
+      const { job_id, status } = await regenerateJob(jobId);
+      if (status !== "pending") throw new Error();
+
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.tempId === newTempId
+            ? { ...t, jobId: job_id, status: "in_progress" }
+            : t,
+        ),
+      );
+
+      pollJob(newTempId, job_id);
+    } catch {
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.tempId === newTempId ? { ...t, status: "failed", error: true } : t,
+        ),
+      );
+    }
   };
 
   const handleDelete = async (groupId) => {
+    setTasks((prev) => prev.filter((t) => t.jobId !== groupId));
     await deleteGroup(groupId);
     await refreshGenerated();
   };

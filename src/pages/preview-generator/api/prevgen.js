@@ -33,9 +33,23 @@ export async function generateGroup({
   return safeJson(resp);
 }
 
-export async function regenerateGroup(groupId) {
-  const resp = await fetch(`${BASE}/regenerate/${groupId}`, { method: "POST" });
-  return safeJson(resp);
+export async function startGeneration(req) {
+  const resp = await fetch(`${BASE}/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(req),
+  });
+  return safeJson(resp); // { job_id, status }
+}
+
+export async function fetchGenerationStatus(jobId) {
+  const resp = await fetch(`${BASE}/generate/${jobId}/status`);
+  return safeJson(resp); // { job_id, status, result?, error? }
+}
+
+export async function regenerateJob(jobId) {
+  const resp = await fetch(`${BASE}/regenerate/${jobId}`, { method: "POST" });
+  return safeJson(resp); // { job_id, status }
 }
 
 export async function deleteGroup(groupId) {
@@ -55,16 +69,4 @@ export async function listExamples() {
 
 export async function listMyTemplates() {
   return safeJson(await fetch(`${BASE}/my-templates`));
-}
-
-export async function saveLayers(groupId, imageId, layers) {
-  const resp = await fetch(
-    `${BASE}/generated/${groupId}/image/${imageId}/layers`,
-    {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(layers),
-    },
-  );
-  return safeJson(resp);
 }

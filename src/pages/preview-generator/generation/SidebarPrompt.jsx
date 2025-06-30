@@ -205,7 +205,7 @@ export const SidebarPrompt = ({
                             {subtitle}
                           </span>
                         </div>
-                        <div className="flex-shrink-0 opacity-70 group-hover/promptFormat:stroke-main-accent">
+                        <div className="flex-shrink-0 stroke-white opacity-70 group-hover/promptFormat:stroke-main-accent">
                           {preview}
                         </div>
                       </button>
